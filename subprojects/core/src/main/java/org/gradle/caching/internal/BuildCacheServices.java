@@ -36,7 +36,6 @@ import org.gradle.caching.internal.packaging.impl.TarPackerFileSystemSupport;
 import org.gradle.caching.internal.services.BuildCacheControllerFactory;
 import org.gradle.caching.internal.services.DefaultBuildCacheControllerFactory;
 import org.gradle.caching.local.DirectoryBuildCache;
-import org.gradle.caching.local.internal.DirectoryBuildCacheServiceFactory;
 import org.gradle.internal.file.BufferProvider;
 import org.gradle.internal.file.Deleter;
 import org.gradle.internal.file.FileException;
