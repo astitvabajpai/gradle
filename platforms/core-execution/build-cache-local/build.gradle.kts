@@ -7,12 +7,9 @@ description = "Local build cache implementation"
 
 dependencies {
     api(project(":build-cache"))
-    api(libs.inject)
 
     api(project(":base-annotations"))
-    api(project(":base-services"))
     api(project(":build-cache-spi"))
-    api(project(":core-api"))
     api(project(":files"))
     api(project(":functional"))
     api(project(":hashing"))
