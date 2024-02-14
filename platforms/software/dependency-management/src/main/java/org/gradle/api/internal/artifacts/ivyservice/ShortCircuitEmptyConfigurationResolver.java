@@ -139,6 +139,11 @@ public class ShortCircuitEmptyConfigurationResolver implements ConfigurationReso
         @Override
         public void visitArtifacts(ArtifactVisitor visitor, boolean continueOnSelectionFailure) {
         }
+
+        @Override
+        public ResolutionStrategy.SortOrder getDefaultSortOrder() {
+            return ResolutionStrategy.SortOrder.DEFAULT;
+        }
     }
 
     @VisibleForTesting
