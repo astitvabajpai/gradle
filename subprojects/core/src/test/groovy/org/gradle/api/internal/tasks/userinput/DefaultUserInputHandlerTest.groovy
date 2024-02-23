@@ -79,38 +79,6 @@ class DefaultUserInputHandlerTest extends Specification {
         input == null
     }
 
-    def "prompts user again on invalid response to required yes/no question"() {
-        when:
-        def input = ask { it.askYesNoQuestion(TEXT) }
-
-        then:
-        1 * outputEventBroadcaster.onOutput(_ as UserInputRequestEvent)
-        1 * outputEventBroadcaster.onOutput(_ as YesNoQuestionPromptEvent)
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse(invalidInput)
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event ->
-            assert event.prompt.trim() == "Please enter 'yes' or 'no':"
-            assert !event.newQuestion
-        }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse('no')
-        1 * outputEventBroadcaster.onOutput(_ as UserInputResumeEvent)
-        0 * outputEventBroadcaster._
-        0 * userInputHandler._
-
-        and:
-        input == false
-
-        where:
-        invalidInput | _
-        ''           | _
-        'bla'        | _
-        'y'          | _
-        'Y'          | _
-        'ye'         | _
-        'YES'        | _
-        'n'          | _
-        'NO'         | _
-    }
-
     def "can ask yes/no question"() {
         when:
         def input = ask { it.askBooleanQuestion(TEXT, true) }
@@ -160,31 +128,16 @@ class DefaultUserInputHandlerTest extends Specification {
         input == true
     }
 
-    def "prompts user again on invalid response to yes/no question"() {
+    def "yes/no question returns default on end-of-input"() {
         when:
         def input = ask { it.askBooleanQuestion(TEXT, true) }
 
         then:
-        1 * outputEventBroadcaster.onOutput(_ as UserInputRequestEvent)
-        1 * outputEventBroadcaster.onOutput(_ as BooleanQuestionPromptEvent)
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse(invalidInput)
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event ->
-            assert event.prompt.trim() == "Please enter 'yes' or 'no' (default: 'yes'):"
-            assert !event.newQuestion
-        }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse('no')
-        1 * outputEventBroadcaster.onOutput(_ as UserInputResumeEvent)
-        0 * outputEventBroadcaster._
+        1 * userInputReader.readInput() >> UserInputReader.END_OF_INPUT
         0 * userInputHandler._
 
         and:
-        input == false
-
-        where:
-        invalidInput | _
-        'bla'        | ''
-        'nope'       | ''
-        'yep'        | ''
+        input == true
     }
 
     def "can ask select question"() {
