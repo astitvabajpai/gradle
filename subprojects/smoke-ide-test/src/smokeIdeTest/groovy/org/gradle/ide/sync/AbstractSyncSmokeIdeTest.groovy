@@ -35,14 +35,17 @@ import org.gradle.profiler.studio.AndroidStudioSyncAction
 import org.gradle.profiler.studio.invoker.StudioBuildInvocationResult
 import org.gradle.profiler.studio.invoker.StudioGradleScenarioDefinition
 import org.gradle.profiler.studio.invoker.StudioGradleScenarioInvoker
+import org.gradle.test.precondition.Requires
+import org.gradle.test.preconditions.IntegTestPreconditions
 
 import java.nio.file.Path
 import java.util.function.Consumer
 
+@Requires(IntegTestPreconditions.Java17HomeAvailable)
 /**
  * Tests that runs a project import to IDE, with an optional provisioning of the desired IDE.
  *
- * Provisioned IDEs are cached in the `ideHome` directory.
+ * Provisioned IDEs are cached in the {@link AbstractSyncSmokeIdeTest#ideHome} directory.
  */
 abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
 
@@ -55,7 +58,7 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
     protected StudioBuildInvocationResult syncResult
 
     /**
-     * Downloads, if it absent in `ideHome` dir, Android Studio with a passed version
+     * Downloads, if it absent in {@link #ideHome} dir, Android Studio with a passed version
      * and runs a project import to it.
      *
      * Requires ANDROID_HOME env. variable set with Android SDK (normally on MacOS it's installed in "$HOME/Library/Android/sdk").
@@ -82,11 +85,11 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
     }
 
     /**
-     * Downloads, if it absent in `ideHome` dir, Intellij IDEA with a passed version and a build type,
+     * Downloads, if it absent in {@link #ideHome} dir, Intellij IDEA with a passed version and a build type,
      * and runs a project import to it.
      *
-     * Available build types are: release, eap, rc
-
+     * Available build types are: release, eap, rc.
+     *
      * Local IDEA installation can be passed via `ideaHome` system property and it takes precedence over
      * a version passed as a parameter.
      */
