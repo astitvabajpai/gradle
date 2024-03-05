@@ -75,6 +75,7 @@ class SmokeIdeTestSystemProperties(
     val studioHome: Provider<String>
 ) : CommandLineArgumentProvider {
     override fun asArguments(): MutableIterable<String> = buildList {
+        add("-Dstudio.tests.headless=true")
         if (ideaHome.isPresent) {
             add("-DideaHome=${ideaHome.get()}")
         }

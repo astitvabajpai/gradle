@@ -16,6 +16,7 @@
 
 package org.gradle.ide.sync
 
+
 import org.gradle.integtests.fixtures.AbstractIntegrationSpec
 import org.gradle.internal.UncheckedException
 import org.gradle.internal.jvm.Jvm
@@ -192,7 +193,9 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
                         syncResult = studioBuildInvocationResult
                     }
                 })
-        } catch (IOException | InterruptedException e) {
+        } catch (NullPointerException e) {}
+        catch (IOException | InterruptedException e) {
+            printIdeLog(ideHome.toFile())
             throw UncheckedException.throwAsUncheckedException(e)
         } finally {
             try {
@@ -201,6 +204,12 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
                 e.printStackTrace()
             }
         }
+    }
+
+    private def printIdeLog(File ideSandbox) {
+        File logFile = new File(ideSandbox, "/logs/idea.log")
+        String message = logFile.exists() ? "\n${logFile.text}" : "IDE log file '${logFile}' doesn't exist, nothing to print."
+        println("[IDE LOGS] $message")
     }
 
     private static PidInstrumentation createPidInstrumentation() {
