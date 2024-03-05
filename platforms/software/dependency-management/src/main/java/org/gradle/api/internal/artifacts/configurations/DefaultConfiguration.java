@@ -1886,6 +1886,7 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
         }
 
         @Override
+        @SuppressWarnings("deprecation")
         public AttributeContainer getAttributes() {
             return configurationAttributes;
         }

@@ -16,6 +16,7 @@
 
 package org.gradle.api.internal.artifacts.resolver;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.ArtifactView;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
@@ -42,6 +43,7 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.specs.Spec;
 import org.gradle.api.specs.Specs;
 import org.gradle.internal.Actions;
+import org.gradle.internal.deprecation.DeprecationLogger;
 import org.gradle.internal.model.CalculatedValueContainerFactory;
 import org.gradle.internal.reflect.Instantiator;
 
@@ -150,7 +152,8 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
         );
     }
 
-    private static class DefaultArtifactView implements ArtifactView {
+    @VisibleForTesting
+    public static class DefaultArtifactView implements ArtifactView {
 
         // View configuration
         private final boolean lenient;
@@ -241,8 +244,14 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
         }
 
         @Override
+        @Deprecated
         public ImmutableAttributes getAttributes() {
-            return viewAttributes;
+            DeprecationLogger.deprecateMethod(ArtifactView.class, "getAttributes()")
+                .willBecomeAnErrorInGradle9()
+                .withUpgradeGuideSection(8, "deprecate_artifact_view_get_attributes")
+                .nagUser();
+
+            return computeViewAttributes(resultProvider.getValue());
         }
     }
 
