@@ -41,8 +41,9 @@ public class IntQuestionPromptEvent extends PromptOutputEvent {
         if (text.isEmpty()) {
             return Either.left(defaultValue);
         }
+        String trimmed = text.trim();
         try {
-            int result = Integer.parseInt(text);
+            int result = Integer.parseInt(trimmed);
             if (result >= minValue) {
                 return Either.left(result);
             }

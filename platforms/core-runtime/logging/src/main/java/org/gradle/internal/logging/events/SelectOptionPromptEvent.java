@@ -41,8 +41,9 @@ public class SelectOptionPromptEvent extends PromptOutputEvent {
         if (text.isEmpty()) {
             return Either.left(defaultOption);
         }
-        if (text.matches("\\d+")) {
-            int value = Integer.parseInt(text);
+        String trimmed = text.trim();
+        if (trimmed.matches("\\d+")) {
+            int value = Integer.parseInt(trimmed);
             if (value > 0 && value <= optionCount) {
                 return Either.left(value);
             }

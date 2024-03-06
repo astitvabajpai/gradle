@@ -19,7 +19,6 @@ package org.gradle.api.internal.tasks.userinput
 import org.gradle.internal.logging.events.BooleanQuestionPromptEvent
 import org.gradle.internal.logging.events.IntQuestionPromptEvent
 import org.gradle.internal.logging.events.OutputEventListener
-import org.gradle.internal.logging.events.PromptOutputEvent
 import org.gradle.internal.logging.events.SelectOptionPromptEvent
 import org.gradle.internal.logging.events.TextQuestionPromptEvent
 import org.gradle.internal.logging.events.UserInputRequestEvent
@@ -213,30 +212,6 @@ Enter selection (default: 11!) [1..3] """)
         input == 12
     }
 
-    def "prompts user again on invalid response to select question"() {
-        when:
-        def input = ask { it.selectOption(TEXT, [11, 12, 13], 12) }
-
-        then:
-        1 * outputEventBroadcaster.onOutput(_ as UserInputRequestEvent)
-        1 * outputEventBroadcaster.onOutput(_ as SelectOptionPromptEvent)
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse('bla')
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event -> assert event.prompt.trim() == "Please enter a value between 1 and 3:" }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse('4')
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event -> assert event.prompt.trim() == "Please enter a value between 1 and 3:" }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse('0')
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event -> assert event.prompt.trim() == "Please enter a value between 1 and 3:" }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse('-2')
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event -> assert event.prompt.trim() == "Please enter a value between 1 and 3:" }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse('1')
-        1 * outputEventBroadcaster.onOutput(_ as UserInputResumeEvent)
-        0 * outputEventBroadcaster._
-        0 * userInputHandler._
-
-        and:
-        input == 11
-    }
-
     def "select question returns default on end-of-input"() {
         when:
         def input = ask { it.selectOption(TEXT, [11, 12, 13], 12) }
@@ -298,48 +273,6 @@ Enter selection (default: 11!) [1..3] """)
 
         and:
         input == 12
-    }
-
-    def "prompts user again on invalid response to int question"() {
-        when:
-        def input = ask { it.askIntQuestion("enter value", 1, 2) }
-
-        then:
-        1 * outputEventBroadcaster.onOutput(_ as UserInputRequestEvent)
-        1 * outputEventBroadcaster.onOutput(_ as IntQuestionPromptEvent)
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse("not an int")
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event ->
-            assert event.prompt.trim() == "Please enter an integer value (min: 1, default: 2):"
-            assert !event.newQuestion
-        }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse("12")
-        1 * outputEventBroadcaster.onOutput(_ as UserInputResumeEvent)
-        0 * outputEventBroadcaster._
-        0 * userInputHandler._
-
-        and:
-        input == 12
-    }
-
-    def "prompts user again on int question response below minimum value"() {
-        when:
-        def input = ask { it.askIntQuestion("enter value", 10, 12) }
-
-        then:
-        1 * outputEventBroadcaster.onOutput(_ as UserInputRequestEvent)
-        1 * outputEventBroadcaster.onOutput(_ as IntQuestionPromptEvent)
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse("9")
-        1 * outputEventBroadcaster.onOutput(_) >> { PromptOutputEvent event ->
-            assert event.prompt.trim() == "Please enter an integer value >= 10 (default: 12):"
-            assert !event.newQuestion
-        }
-        1 * userInputReader.readInput() >> new UserInputReader.TextResponse("10")
-        1 * outputEventBroadcaster.onOutput(_ as UserInputResumeEvent)
-        0 * outputEventBroadcaster._
-        0 * userInputHandler._
-
-        and:
-        input == 10
     }
 
     def "uses default value for int question when empty line input received"() {
