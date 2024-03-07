@@ -56,6 +56,10 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
 
     private final Path ideHome = buildContext.gradleUserHomeDir.file("ide").toPath()
 
+    private final File ideSandbox = file("ide-sandbox")
+
+    private final File profilerOutput = file("profiler-output")
+
     protected StudioBuildInvocationResult syncResult
 
     /**
@@ -115,9 +119,6 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
     }
 
     private InvocationSettings.InvocationSettingsBuilder syncInvocationSettingsBuilder(File ideInstallDir) {
-        def ideSandbox = file("ide-sandbox")
-        def profilerOutput = file('profiler-output')
-
         return new InvocationSettings.InvocationSettingsBuilder()
             .setProjectDir(testDirectory)
             .setProfiler(Profiler.NONE)
@@ -193,9 +194,21 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
                         syncResult = studioBuildInvocationResult
                     }
                 })
-        } catch (NullPointerException e) {}
+        }
+        catch (NullPointerException e) {
+            /*
+            Initial (a very first for a project, essentially a warmup one) sync in a headless mode
+            behaves differently to common scenarios.
+
+            Sync itself is finishing successfully, but an infrastructure inside the gradle-profiler doesn't
+            able to get an event of it.
+
+            Currently AbstractSyncSmokeIdeTest relies on a side-effect of sync - creation of a CC report.
+            So it's safe for testing purposes to catch gradle-profiler infrastructure exceptions here.
+            */
+        }
         catch (IOException | InterruptedException e) {
-            printIdeLog(ideHome.toFile())
+            printIdeLog(ideSandbox)
             throw UncheckedException.throwAsUncheckedException(e)
         } finally {
             try {
