@@ -18,6 +18,7 @@ package org.gradle.tooling.events.problems;
 
 import org.gradle.api.Incubating;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -29,7 +30,7 @@ import java.util.List;
  * @since 8.4
  */
 @Incubating
-public interface ProblemDescriptor extends BaseProblemDescriptor {
+public interface ProblemDescriptor {
 
     /**
      * Returns the problem category.
@@ -53,6 +54,7 @@ public interface ProblemDescriptor extends BaseProblemDescriptor {
      * @return the problem details
      * @since 8.6
      */
+    @Nullable
     Details getDetails();
 
     /**
@@ -77,6 +79,7 @@ public interface ProblemDescriptor extends BaseProblemDescriptor {
      * @return the locations
      * @since 8.6
      */
+    @Nullable
     DocumentationLink getDocumentationLink();
 
     /**
@@ -88,11 +91,13 @@ public interface ProblemDescriptor extends BaseProblemDescriptor {
     List<Solution> getSolutions();
 
     /**
-     * Returns the exception associated with this problem.
+     * Returns the failure associated with this problem.
+     * <br>
+     * <code>null</code> if run against a Gradle version prior to 8.7
      *
-     * @return the exception
-     * @since 8.6
+     * @return the failure
+     * @since 8.7
      */
-    //TODO: fix in 8.7
-    //ExceptionContainer getException();
+    @Nullable
+    FailureContainer getFailure();
 }

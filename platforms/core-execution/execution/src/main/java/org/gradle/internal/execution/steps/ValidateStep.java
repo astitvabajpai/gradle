@@ -19,7 +19,7 @@ package org.gradle.internal.execution.steps;
 import com.google.common.collect.ImmutableList;
 import org.gradle.api.internal.GeneratedSubclasses;
 import org.gradle.api.problems.Severity;
-import org.gradle.api.problems.internal.DefaultProblemCategory;
+import org.gradle.api.problems.internal.GradleCoreProblemGroup;
 import org.gradle.api.problems.internal.InternalProblemReporter;
 import org.gradle.api.problems.internal.InternalProblems;
 import org.gradle.api.problems.internal.Problem;
@@ -85,7 +85,7 @@ public class ValidateStep<C extends BeforeExecutionContext, R extends Result> im
 
         Map<Severity, ImmutableList<Problem>> problemsMap = problems.stream()
             .collect(
-                groupingBy(Problem::getSeverity,
+                groupingBy(p -> p.getDefinition().getSeverity(),
                     mapping(identity(), toImmutableList())));
         ImmutableList<Problem> warnings = problemsMap.getOrDefault(WARNING, of());
         ImmutableList<Problem> errors = problemsMap.getOrDefault(ERROR, of());
@@ -140,9 +140,9 @@ public class ValidateStep<C extends BeforeExecutionContext, R extends Result> im
             workValidationContext.visitPropertyProblem(problem -> problem
                 .forProperty(propertyName)
                 .typeIsIrrelevantInErrorMessage()
-                .label(unknownImplSnapshot.getProblemDescription())
+                .id(TextUtil.screamingSnakeToKebabCase(UNKNOWN_IMPLEMENTATION), "Nested input problem for property", GradleCoreProblemGroup.validation().property())
+                .contextualLabel(unknownImplSnapshot.getProblemDescription())
                 .documentedAt(userManual("validation_problems", "implementation_unknown"))
-                .category(DefaultProblemCategory.VALIDATION, "property", TextUtil.screamingSnakeToKebabCase(UNKNOWN_IMPLEMENTATION))
                 .details(unknownImplSnapshot.getReasonDescription())
                 .solution(unknownImplSnapshot.getSolutionDescription())
                 .severity(ERROR)
@@ -155,9 +155,9 @@ public class ValidateStep<C extends BeforeExecutionContext, R extends Result> im
             UnknownImplementationSnapshot unknownImplSnapshot = (UnknownImplementationSnapshot) implementation;
             workValidationContext.visitPropertyProblem(problem -> problem
                 .typeIsIrrelevantInErrorMessage()
-                .label(descriptionPrefix + work + " " + unknownImplSnapshot.getProblemDescription())
+                .id(TextUtil.screamingSnakeToKebabCase(UNKNOWN_IMPLEMENTATION), "Problem with property", GradleCoreProblemGroup.validation().property())
+                .contextualLabel(descriptionPrefix + work + " " + unknownImplSnapshot.getProblemDescription())
                 .documentedAt(userManual("validation_problems", "implementation_unknown"))
-                .category(DefaultProblemCategory.VALIDATION, "property", TextUtil.screamingSnakeToKebabCase(UNKNOWN_IMPLEMENTATION))
                 .details(unknownImplSnapshot.getReasonDescription())
                 .solution(unknownImplSnapshot.getSolutionDescription())
                 .severity(ERROR)

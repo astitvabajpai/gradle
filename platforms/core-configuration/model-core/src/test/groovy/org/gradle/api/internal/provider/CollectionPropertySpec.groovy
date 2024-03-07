@@ -23,10 +23,12 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.internal.Describables
 import org.gradle.util.internal.TextUtil
+import org.spockframework.lang.Wildcard
 
 import java.util.function.Consumer
 
 import static org.gradle.api.internal.provider.CircularEvaluationSpec.ProviderConsumer.GET_PRODUCER
+import static org.gradle.api.internal.provider.Providers.notDefined
 
 abstract class CollectionPropertySpec<C extends Collection<String>> extends PropertySpec<C> {
     AbstractCollectionProperty<String, C> propertyWithDefaultValue() {
@@ -62,6 +64,8 @@ abstract class CollectionPropertySpec<C extends Collection<String>> extends Prop
 
     abstract AbstractCollectionProperty<String, C> property()
 
+    abstract String getCollectionName()
+
     @Override
     protected void setToNull(Object property) {
         property.set((Iterable) null)
@@ -74,16 +78,19 @@ abstract class CollectionPropertySpec<C extends Collection<String>> extends Prop
 
     def property = property()
 
-    protected void assertValueIs(Collection<String> expected) {
+    protected void assertValueIs(Collection<String> expected, PropertyInternal<?> property = this.property) {
         assert property.present
         def actual = property.get()
         assert actual instanceof ImmutableCollection
         assert immutableCollectionType.isInstance(actual)
+        assertCollectionIs(actual, expected)
+    }
+
+    protected void assertCollectionIs(ImmutableCollection actual, Collection<String> expected) {
         assert actual == toImmutable(expected)
         actual.each {
             assert it instanceof String
         }
-        assert property.present
     }
 
     protected abstract C toImmutable(Collection<String> values)
@@ -421,7 +428,7 @@ abstract class CollectionPropertySpec<C extends Collection<String>> extends Prop
 
     def "property has no value when set to provider with no value and other values appended"() {
         given:
-        property.set(Providers.notDefined())
+        property.set(notDefined())
 
         and:
         property.add("1")
@@ -446,7 +453,7 @@ abstract class CollectionPropertySpec<C extends Collection<String>> extends Prop
         given:
         property.set(toMutable(["123"]))
         property.add("456")
-        property.add(Providers.notDefined())
+        property.add(notDefined())
 
         expect:
         !property.present
@@ -480,7 +487,7 @@ The value of this property is derived from: <source>""")
         given:
         property.set(toMutable(["123"]))
         property.add("456")
-        property.addAll(Providers.notDefined())
+        property.addAll(notDefined())
 
         expect:
         !property.present
@@ -1270,12 +1277,38 @@ The value of this property is derived from: <source>""")
         given:
         property.convention(Providers.of(["1"]))
         property.withActualValue {
-            it.addAll(Providers.of(["2"]))
+            it.add(Providers.of("2"))
             it.addAll(Providers.of(["3", "4"]))
         }
+
         expect:
         assertValueIs toImmutable(["1", "2", "3", "4"])
         property.explicit
+
+        when:
+        property.unset()
+
+        then:
+        assertValueIs toImmutable(["1"])
+        !property.explicit
+    }
+
+    def "can add to convention value with append"() {
+        given:
+        property.convention(Providers.of(["1"]))
+        property.append(Providers.of("2"))
+        property.appendAll(Providers.of(["3", "4"]))
+
+        expect:
+        assertValueIs toImmutable(["1", "2", "3", "4"])
+        property.explicit
+
+        when:
+        property.unset()
+
+        then:
+        assertValueIs toImmutable(["1"])
+        !property.explicit
     }
 
     def "can add to explicit value"() {
@@ -1285,6 +1318,17 @@ The value of this property is derived from: <source>""")
             it.addAll(Providers.of(["1", "2"]))
             it.addAll(Providers.of(["3", "4"]))
         }
+
+        expect:
+        assertValueIs toImmutable(["1", "2", "3", "4"])
+        property.explicit
+    }
+
+    def "can add to explicit value with append"() {
+        given:
+        property.set([])
+        property.appendAll(Providers.of(["1", "2"]))
+        property.appendAll(Providers.of(["3", "4"]))
 
         expect:
         assertValueIs toImmutable(["1", "2", "3", "4"])
@@ -1301,5 +1345,255 @@ The value of this property is derived from: <source>""")
         expect:
         assertValueIs toImmutable(["1", "2", "3", "4"])
         property.explicit
+
+        when:
+        property.convention(Providers.of("0"))
+
+        then:
+        assertValueIs toImmutable(["1", "2", "3", "4"])
+        property.explicit
+    }
+
+    def "can add to actual value without previous configuration with append"() {
+        given:
+        property.appendAll(Providers.of(["1", "2"]))
+        property.appendAll(Providers.of(["3", "4"]))
+
+        expect:
+        assertValueIs toImmutable(["1", "2", "3", "4"])
+        property.explicit
+    }
+
+    def "test '#label' vs undefined-safety"(String label) {
+        given:
+        if (!(convention instanceof Wildcard)) {
+            if (convention instanceof Provider) {
+                property.convention((Provider) convention)
+            } else {
+                property.convention((Iterable) convention)
+            }
+        }
+        if (!(explicit instanceof Wildcard)) {
+            if (explicit instanceof Provider) {
+                property.set((Provider) explicit)
+            } else {
+                property.set((Iterable) explicit)
+            }
+        }
+
+        when:
+        operations.each {operation -> operation.call(property) }
+
+        then:
+        expected == null || property.getOrNull() == toImmutable(expected)
+        expected != null || !property.present
+
+        where:
+        expected    | explicit      | convention    | label                                             | operations
+        ["1"]       | _             | _             | "add"                                             | { it.add("1") }
+        ["1"]       | _             | _             | "append"                                          | { it.append("1") }
+        ["1"]       | []            | _             | "add to empty"                                    | { it.add("1") }
+        ["1"]       | []            | _             | "append to empty"                                 | { it.append("1") }
+        ["1"]       | _             | []            | "add to empty convention"                         | { it.add("1") }
+        ["1"]       | _             | []            | "append to empty convention"                      | { it.append("1") }
+        null        | null          | []            | "add to unset value w/ empty convention"          | { it.add("1") }
+        ["1"]       | null          | []            | "append to unset value w/ empty convention"       | { it.append("1") }
+        ["1"]       | _             | ["0"]         | "add to non-empty convention"                     | { it.add("1") }
+        ["0", "1"]  | _             | ["0"]         | "append to non-empty convention"                  | { it.append("1") }
+        null        | null          | ["0"]         | "add to unset value w/ non-empty convention"      | { it.add("1") }
+        ["0", "1"]  | null          | ["0"]         | "append to unset value w/ non-empty convention"   | { it.append("1") }
+        null        | notDefined()  | _             | "add to missing"                                  | { it.add("1") }
+        ["1"]       | notDefined()  | _             | "append to missing"                               | { it.append("1") }
+        null        | notDefined()  | ["0"]         | "add to missing w/ non-empty convention"          | { it.add("1") }
+        ["1"]       | notDefined()  | ["0"]         | "append to missing w/ non-empty convention"       | { it.append("1") }
+        null        | []            | _             | "add missing to empty value"                      | { it.add(notDefined()) }
+        []          | []            | _             | "append missing to empty value"                   | { it.append(notDefined()) }
+        null        | _             | _             | "add missing"                                     | { it.add(notDefined()) }
+        []          | _             | _             | "append missing"                                  | { it.append(notDefined()) }
+        ["1"]       | _             | _             | "add missing, then append"                        | { it.add(notDefined()) ; it.append("1") }
+        ["1"]       | _             | _             | "append missing, then add"                        | { it.append(notDefined()) ; it.add("1") }
+        ["1"]       | ["0"]         | _             | "add missing to non-empty value, then append"     | { it.add(notDefined()) ; it.append("1") }
+        ["0", "1"]  | ["0"]         | _             | "append missing to non-empty value, then add"     | { it.append(notDefined()) ; it.add("1") }
+        ["1"]       | _             | ["0"]         | "add missing to non-empty convention, then append"| { it.add(notDefined()) ; it.append("1") }
+        ["0", "1"]  | _             | ["0"]         | "append missing to non-empty convention, then add"| { it.append(notDefined()) ; it.add("1") }
+        ["1"]       | _             | _             | "add, then append missing"                        | { it.add("1") ; it.append(notDefined()) }
+        null        | _             | _             | "append, then add missing"                        | { it.append("1") ; it.add(notDefined()) }
+        ["0", "1"]  | ["0"]         | _             | "add to non-empty value, then append missing"     | { it.add("1") ; it.append(notDefined()) }
+        null        | ["0"]         | _             | "append to non-empty value, then add missing"     | { it.append("1") ; it.add(notDefined()) }
+        ["1"]       | _             | ["0"]         | "add to non-empty convention, then append missing"| { it.add("1") ; it.append(notDefined()) }
+        null        | _             | ["0"]         | "append to non-empty conventio, then add missing" | { it.append("1") ; it.add(notDefined()) }
+        ["1"]       | _             | _             | "add, then add missing, then append"              | { it.add("0") ; it.add(notDefined()) ; it.append("1") }
+        ["0", "1"]  | _             | _             | "add, then append missing, then add"              | { it.add("0") ; it.append(notDefined()) ; it.add("1") }
+    }
+
+    def "execution time value is present if only undefined-safe operations are performed"() {
+        given:
+        property.set(notDefined())
+        property.add(notDefined())
+        property.append("2")
+        property.addAll(['3'])
+        property.addAll(['4'])
+        property.append(notDefined())
+
+        expect:
+        assertValueIs(['2', '3', '4'])
+
+        when:
+        def execTimeValue = property.calculateExecutionTimeValue()
+
+        then:
+        assertCollectionIs(toImmutable(['2', '3', '4']), execTimeValue.toValue().get())
+    }
+
+    def "property restores undefined-safe items"() {
+        given:
+        property.add("1")
+        property.appendAll(supplierWithChangingExecutionTimeValues(List, value, value))
+        property.add("3")
+
+        when:
+        def execTimeValue = property.calculateExecutionTimeValue()
+        def property2 = property()
+        property2.fromState(execTimeValue)
+
+        then:
+        assertValueIs(result, property2)
+
+        where:
+        value | result
+        ["2"] | ["1", "2", "3"]
+        null  | ["1", "3"]
+    }
+
+    def "property remains undefined-safe after restored"() {
+        given:
+        property.append(notDefined())
+        property.add("2")
+        property.append(notDefined())
+        property.append(notDefined())
+        property.addAll(supplierWithChangingExecutionTimeValues(['3'], ['3a'], ['3b'], ['3c'], ['3d']))
+        property.addAll(supplierWithValues(['4']))
+        property.append(notDefined())
+
+        when:
+        def execTimeValue = property.calculateExecutionTimeValue()
+        def property2 = property()
+        property2.fromState(execTimeValue)
+
+        then:
+        assertValueIs(['2', '3a', '4'], property2)
+
+        when:
+        property2.add("5")
+        property2.append("6")
+        property2.append(notDefined())
+        def execTimeValue2 = property2.calculateExecutionTimeValue()
+
+        then:
+        assertValueIs(['2', '3b', '4', '5', '6'], property2)
+
+        when:
+        def property3 = property()
+        property3.fromState(execTimeValue2)
+
+        then:
+        assertValueIs(['2', '3d', '4', '5', '6'], property3)
+    }
+
+    def "can alternate append and add"() {
+        when:
+        property.append("1")
+        property.add("2")
+        property.append("3")
+
+        then:
+        assertValueIs toImmutable(["1", "2", "3"])
+    }
+
+    def "can alternate add and append"() {
+        when:
+        property.add("1")
+        property.append("2")
+        property.add("3")
+
+        then:
+        assertValueIs toImmutable(["1", "2", "3"])
+    }
+
+    def "has meaningful toString for #valueDescription"(Closure<AbstractCollectionProperty<String, C>> initializer, String stringValue) {
+        given:
+        def p = initializer.call()
+
+        expect:
+        p.toString() == stringValue
+
+        where:
+        valueDescription      | initializer                                    || stringValue
+        "default"             | { propertyWithDefaultValue() }                 || "$collectionName(class ${String.name}, [])"
+        "empty"               | { property().value([]) }                       || "$collectionName(class ${String.name}, [])"
+        "unset"               | { propertyWithNoValue() }                      || "$collectionName(class ${String.name}, missing)"
+        "s1"                  | { property().tap { add("s1") } }               || "$collectionName(class ${String.name}, [s1])"
+        "[s1, s2]"            | { property().value(["s1, s2"]) }               || "$collectionName(class ${String.name}, [s1, s2])"
+        "s1 + s2"             | { property().tap { add("s1"); add("s2") } }    || "$collectionName(class ${String.name}, [s1] + [s2])"
+        "provider {s1}"       | { property().tap { add(Providers.of("s1")) } } || "$collectionName(class ${String.name}, item(fixed(class ${String.name}, s1)))"
+        "provider {[s1, s2]}" | { property().value(Providers.of(["s1, s2"])) } || "$collectionName(class ${String.name}, fixed(class ${ArrayList.name}, [s1, s2]))"
+
+        // The following case abuses Groovy lax type-checking to put an invalid value into the property.
+        "[provider {s1}]"     | { property().value([Providers.of("s1")]) }     || "$collectionName(class ${String.name}, [fixed(class ${String.name}, s1)])"
+    }
+
+    def "can set explicit value to convention"() {
+        given:
+        property.convention(['1'])
+        property.value(['4'])
+
+        when:
+        property.setToConvention()
+
+        then:
+        assertValueIs(['1'])
+        property.explicit
+
+        when:
+        property.add('3')
+
+        then:
+        assertValueIs(['1', '3'])
+
+        when:
+        property.unset()
+
+        then:
+        assertValueIs(['1'])
+        !property.explicit
+    }
+
+    def "can set explicit value to convention if not set yet"() {
+        given:
+        property.convention(['1'])
+        property.value(['4'])
+
+        when:
+        property.setToConventionIfUnset()
+
+        then:
+        assertValueIs(['4'])
+
+        when:
+        property.unset()
+        property.setToConventionIfUnset()
+
+        then:
+        assertValueIs(['1'])
+        property.explicit
+    }
+
+    def "property is empty when setToConventionIfUnset if convention not set yet"() {
+        when:
+        property.setToConventionIfUnset()
+
+        then:
+        assertValueIs([])
+        !property.explicit
     }
 }

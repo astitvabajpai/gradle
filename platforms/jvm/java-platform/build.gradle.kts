@@ -20,14 +20,20 @@ plugins {
 
 description = "Adds support for creating dependency platforms for JVM projects"
 
+errorprone {
+    disabledChecks.addAll(
+        "InlineFormatString", // 1 occurrences
+    )
+}
+
 dependencies {
     api(project(":core-api"))
 
     api(libs.inject)
 
     implementation(project(":base-services"))
-    implementation(project(":dependency-management"))
     implementation(project(":core"))
+    implementation(project(":dependency-management"))
     implementation(project(":ivy"))
     implementation(project(":maven"))
     implementation(project(":platform-base"))

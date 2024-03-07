@@ -31,7 +31,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         buildFile getProblemReportingScript(taskActionMethodBody)
     }
 
-    def "problem replaced with a validation warning if mandatory label definition is missing"() {
+    def "problem replaced with a validation warning if mandatory id is missing"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
@@ -44,47 +44,24 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
 
         then:
         def problem = collectedProblem
-        problem['label'] == 'problem label must be specified'
-        problem['category'] == [
-            namespace: 'org.example.plugin',
-            category: 'validation',
-            subcategories: ['problems-api', 'missing-label']]
+        problem['definition']['id'] == [
+            name: 'missing-id',
+            displayName: 'Problem id must be specified',
+            parent: [
+                'name': 'problems-api',
+                'displayName': 'Problems API',
+                'parent': null
+            ]
+        ]
         problem['locations'] == [
-            [length: -1, column: -1, line: 12, path: "build file '$buildFile.absolutePath'"],
-            [buildTreePath: ':reportProblem']]
+            [length: -1, column: -1, line: 11, path: "build file '$buildFile.absolutePath'"]]
     }
-
-    def "problem replaced with a validation warning if mandatory category definition is missing"() {
-        given:
-        withReportProblemTask """
-            problems.forNamespace('org.example.plugin').reporting {
-                it.label('Wrong API usage')
-            }
-        """
-
-        when:
-        run('reportProblem')
-
-
-        then:
-        def problem = collectedProblem
-        problem['label'] == 'problem category must be specified'
-        problem['category'] == [
-            namespace: 'org.example.plugin',
-            category: 'validation',
-            subcategories: ['problems-api', 'missing-category']]
-        problem['locations'] == [
-            [length: -1, column: -1, line: 12, path: "build file '$buildFile.absolutePath'"],
-            [buildTreePath: ':reportProblem']]
-    }
-
 
     def "can emit a problem with minimal configuration"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
             }
         """
 
@@ -93,19 +70,24 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
 
         then:
         def problem = collectedProblem
-        problem['label'] == 'label'
-        problem['category'] == [
-            namespace: 'org.example.plugin',
-            category: 'type', subcategories: []]
-        problem['locations'] == [[buildTreePath: ':reportProblem']]
+        problem['definition']['id'] == [
+            name: 'type',
+            displayName: 'label',
+            parent: [
+                name: 'generic',
+                displayName: 'Generic',
+                parent: null
+            ]
+        ]
+        problem['locations'] == [
+            [length: -1, column: -1, line: 11, path: "build file '$buildFile.absolutePath'"]]
     }
 
     def "can emit a problem with stack location"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .stackLocation()
             }
         """
@@ -116,20 +98,23 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
 
         then:
         def problem = collectedProblem
-        problem['label'] == 'label'
-        problem['category'] == [
-            namespace: 'org.example.plugin',
-            category: 'type', subcategories: []]
-        problem['locations'] == [[length: -1, column: -1, line: 12, path: "build file '$buildFile.absolutePath'"],
-                                 [buildTreePath: ':reportProblem']]
+        problem['definition']['id'] == [
+            name: 'type',
+            displayName: 'label',
+            parent: [
+                name: 'generic',
+                displayName: 'Generic',
+                parent: null
+            ]
+        ]
+        problem['locations'] == [[length: -1, column: -1, line: 11, path: "build file '$buildFile.absolutePath'"]]
     }
 
     def "can emit a problem with documentation"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .documentedAt("https://example.org/doc")
             }
         """
@@ -138,15 +123,14 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         run('reportProblem')
 
         then:
-        collectedProblem['documentationLink']['url'] == 'https://example.org/doc'
+        collectedProblem['definition']['documentationLink']['url'] == 'https://example.org/doc'
     }
 
     def "can emit a problem with offset location"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .offsetInFileLocation("test-location", 1, 2)
             }
         """
@@ -155,15 +139,15 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         run('reportProblem')
 
         then:
-        collectedProblem["locations"] == [['path': 'test-location', 'offset': 1, 'length': 2], [buildTreePath: ':reportProblem']]
+        collectedProblem["locations"] == [['path': 'test-location', 'offset': 1, 'length': 2],
+                                          [length: -1, column: -1, line: 11, path: "build file '$buildFile.absolutePath'"]]
     }
 
     def "can emit a problem with file and line number"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .lineInFileLocation("test-location", 1, 2)
             }
         """
@@ -172,15 +156,15 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         run('reportProblem')
 
         then:
-        collectedProblem["locations"] == [["path": "test-location", "line": 1, "column": 2, 'length': -1], ['buildTreePath': ':reportProblem']]
+        collectedProblem["locations"] == [["path": "test-location", "line": 1, "column": 2, 'length': -1],
+                                          [length: -1, column: -1, line: 11, path: "build file '$buildFile.absolutePath'"]]
     }
 
     def "can emit a problem with plugin location specified"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .pluginLocation("org.example.pluginid")
             }
         """
@@ -191,15 +175,14 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         then:
         collectedProblem["locations"] == [
             ["pluginId": "org.example.pluginid"],
-            ['buildTreePath': ':reportProblem']]
+            [length: -1, column: -1, line: 11, path: "build file '$buildFile.absolutePath'"]]
     }
 
     def "can emit a problem with a severity"(Severity severity) {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .severity(Severity.${severity.name()})
             }
         """
@@ -208,7 +191,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         run('reportProblem')
 
         then:
-        collectedProblem['severity'] == severity.name()
+        collectedProblem['definition']['severity'] == severity.name()
 
         where:
         severity << Severity.values()
@@ -218,8 +201,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .solution("solution")
             }
         """
@@ -235,8 +217,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .withException(new RuntimeException("test"))
             }
         """
@@ -254,8 +235,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .additionalData('key', 'value')
             }
         """
@@ -271,8 +251,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').reporting {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .additionalData("key", ["collections", "are", "not", "supported", "yet"])
             }
         """
@@ -283,21 +262,23 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
 
         then:
         def problem = collectedProblem
-        problem['label'] == 'ProblemBuilder.additionalData() supports values of type String, but java.util.ArrayList as given.'
-        problem['category'] == [
-            namespace: 'org.example.plugin',
-            category: 'validation',
-            subcategories: ['problems-api', 'invalid-additional-data']]
-        problem['locations'] == [[length: -1, column: -1, line: 12, path: "build file '$buildFile.absolutePath'"],
-                                 [buildTreePath: ':reportProblem']]
+        problem['definition']['id'] == [
+            name: 'invalid-additional-data',
+            displayName: 'ProblemBuilder.additionalData() only supports values of type String',
+            parent: [
+                name: 'problems-api',
+                displayName: 'Problems API',
+                parent: null
+            ]
+        ]
+        problem['locations'] == [[length: -1, column: -1, line: 11, path: "build file '$buildFile.absolutePath'"]]
     }
 
     def "can throw a problem with a wrapper exception"() {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').throwing {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
                 .withException(new RuntimeException('test'))
             }
         """
@@ -313,8 +294,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         given:
         withReportProblemTask """
             problems.forNamespace('org.example.plugin').rethrowing(new RuntimeException("test")) {
-                it.label('label')
-                .category('type')
+                it.id('type', 'label')
             }
         """
 
@@ -330,14 +310,12 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         withReportProblemTask """
             try {
                 problems.forNamespace("org.example.plugin").throwing {
-                    it.label("inner")
-                    .category("type")
+                    it.id('type', 'inner')
                     .withException(new RuntimeException("test"))
                 }
             } catch (RuntimeException ex) {
                 problems.forNamespace("org.example.plugin").rethrowing(ex) {
-                    it.label("outer")
-                    .category("type")
+                    it.id('type', 'outer')
                 }
             }
         """
@@ -347,8 +325,8 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
 
         then:
         this.collectedProblems.size() == 2
-        this.collectedProblems[0]["label"] == "inner"
-        this.collectedProblems[1]["label"] == "outer"
+        this.collectedProblems[0]['definition']['id']['displayName'] == "inner"
+        this.collectedProblems[1]['definition']['id']['displayName'] == "outer"
     }
 
     def "problem progress events are not aggregated"() {
@@ -356,8 +334,7 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         withReportProblemTask """
             for (int i = 0; i < 10; i++) {
                 problems.forNamespace("org.example.plugin").reporting {
-                        it.label("label")
-                        .category("type")
+                        it.id('type', 'label')
                         .severity(Severity.WARNING)
                         .solution("solution")
                 }
@@ -371,13 +348,10 @@ class ProblemsServiceIntegrationTest extends AbstractIntegrationSpec {
         def problems = this.collectedProblems
         problems.size() == 10
         problems.every {
-            it["label"] == "label" &&
-                it["category"] == [
-                "namespace": "org.example.plugin",
-                "category": "type",
-                "subcategories": []] &&
-                it["severity"] == "WARNING" &&
-                it["solutions"] == ["solution"]
+            it['definition']['id']["displayName"] == "label" &&
+            it['definition']["id"]['name'] == 'type' &&
+            it['definition']["severity"] == "WARNING" &&
+            it['solutions'] == ["solution"]
         }
     }
 }

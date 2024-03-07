@@ -17,24 +17,22 @@
 package org.gradle.tooling.events.problems.internal;
 
 import org.gradle.api.NonNullApi;
-import org.gradle.tooling.events.OperationDescriptor;
-import org.gradle.tooling.events.internal.DefaultOperationDescriptor;
 import org.gradle.tooling.events.problems.AdditionalData;
 import org.gradle.tooling.events.problems.Details;
 import org.gradle.tooling.events.problems.DocumentationLink;
+import org.gradle.tooling.events.problems.FailureContainer;
 import org.gradle.tooling.events.problems.Label;
 import org.gradle.tooling.events.problems.Location;
 import org.gradle.tooling.events.problems.ProblemCategory;
 import org.gradle.tooling.events.problems.ProblemDescriptor;
 import org.gradle.tooling.events.problems.Severity;
 import org.gradle.tooling.events.problems.Solution;
-import org.gradle.tooling.internal.protocol.events.InternalOperationDescriptor;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 @NonNullApi
-public class DefaultProblemsOperationDescriptor extends DefaultOperationDescriptor implements ProblemDescriptor {
+public class DefaultProblemsOperationDescriptor implements ProblemDescriptor {
     private final ProblemCategory category;
     private final Label label;
     private final Details details;
@@ -43,12 +41,9 @@ public class DefaultProblemsOperationDescriptor extends DefaultOperationDescript
     private final DocumentationLink documentationLink;
     private final List<Solution> solutions;
     private final AdditionalData additionalData;
-//    @Nullable
-//    private final ExceptionContainer exception;
+    private final FailureContainer exception;
 
     public DefaultProblemsOperationDescriptor(
-        InternalOperationDescriptor internalDescriptor,
-        OperationDescriptor parent,
         ProblemCategory category,
         Label label,
         @Nullable Details details,
@@ -56,11 +51,9 @@ public class DefaultProblemsOperationDescriptor extends DefaultOperationDescript
         List<Location> locations,
         @Nullable DocumentationLink documentationLink,
         List<Solution> solutions,
-        AdditionalData additionalData
-//        ,
-//        @Nullable ExceptionContainer exception
+        AdditionalData additionalData,
+        @Nullable FailureContainer exception
     ) {
-        super(internalDescriptor, parent);
         this.category = category;
         this.label = label;
         this.details = details;
@@ -69,9 +62,10 @@ public class DefaultProblemsOperationDescriptor extends DefaultOperationDescript
         this.documentationLink = documentationLink;
         this.solutions = solutions;
         this.additionalData = additionalData;
-//        this.exception = exception;
+        this.exception = exception;
     }
 
+    @Override
     public ProblemCategory getCategory() {
         return category;
     }
@@ -81,6 +75,7 @@ public class DefaultProblemsOperationDescriptor extends DefaultOperationDescript
         return label;
     }
 
+    @Nullable
     @Override
     public Details getDetails() {
         return details;
@@ -111,8 +106,9 @@ public class DefaultProblemsOperationDescriptor extends DefaultOperationDescript
         return additionalData;
     }
 
-//    @Nullable
-//    public ExceptionContainer getException() {
-//        return exception;
-//    }
+    @Nullable
+    @Override
+    public FailureContainer getFailure() {
+        return exception;
+    }
 }

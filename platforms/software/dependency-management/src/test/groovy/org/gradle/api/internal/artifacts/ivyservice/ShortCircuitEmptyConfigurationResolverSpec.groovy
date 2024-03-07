@@ -54,7 +54,7 @@ class ShortCircuitEmptyConfigurationResolverSpec extends Specification {
 
         then:
         def visitedArtifacts = results.visitedArtifacts
-        def artifactSet = visitedArtifacts.select(Specs.satisfyAll(), Mock(ArtifactSelectionSpec))
+        def artifactSet = visitedArtifacts.select(Mock(ArtifactSelectionSpec))
         artifactSet.visitDependencies(depVisitor)
         artifactSet.visitArtifacts(artifactVisitor, true)
 
@@ -78,7 +78,7 @@ class ShortCircuitEmptyConfigurationResolverSpec extends Specification {
         results.visitedGraph.resolutionResult.rootSource.get().dependencies.empty
 
         def visitedArtifacts = results.visitedArtifacts
-        def artifactSet = visitedArtifacts.select(Specs.satisfyAll(), Mock(ArtifactSelectionSpec))
+        def artifactSet = visitedArtifacts.select(Mock(ArtifactSelectionSpec))
         artifactSet.visitDependencies(depVisitor)
         artifactSet.visitArtifacts(artifactVisitor, true)
 
@@ -96,7 +96,7 @@ class ShortCircuitEmptyConfigurationResolverSpec extends Specification {
         def results = dependencyResolver.resolveGraph(resolveContext)
 
         then:
-        def resolvedConfig = results.resolvedConfiguration
+        def resolvedConfig = results.legacyResults.resolvedConfiguration
         !resolvedConfig.hasError()
         resolvedConfig.rethrowFailure()
 
@@ -130,7 +130,7 @@ class ShortCircuitEmptyConfigurationResolverSpec extends Specification {
         DependencyLockingProvider lockingProvider = Mock()
         DependencyLockingState lockingState = Mock()
 
-        resolveContext.name >> 'lockedConf'
+        resolveContext.dependencyLockingId >> 'lockedConf'
         resolveContext.resolutionStrategy >> resolutionStrategy
         resolveContext.hasDependencies() >> false
 
@@ -141,9 +141,9 @@ class ShortCircuitEmptyConfigurationResolverSpec extends Specification {
 
         1 * resolutionStrategy.dependencyLockingEnabled >> true
         1 * resolutionStrategy.dependencyLockingProvider >> lockingProvider
-        1 * lockingProvider.loadLockState('lockedConf') >> lockingState
+        1 * lockingProvider.loadLockState('lockedConf', _) >> lockingState
         1 * lockingState.mustValidateLockState() >> false
-        1 * lockingProvider.persistResolvedDependencies('lockedConf', Collections.emptySet(), Collections.emptySet())
+        1 * lockingProvider.persistResolvedDependencies('lockedConf', _, Collections.emptySet(), Collections.emptySet())
     }
 
     def 'empty result with non empty lock state causes resolution through delegate'() {
@@ -153,7 +153,7 @@ class ShortCircuitEmptyConfigurationResolverSpec extends Specification {
         DependencyLockingState lockingState = Mock()
         ResolverResults delegateResults = Mock()
 
-        resolveContext.name >> 'lockedConf'
+        resolveContext.dependencyLockingId >> 'lockedConf'
         resolveContext.resolutionStrategy >> resolutionStrategy
         resolveContext.hasDependencies() >> false
 
@@ -163,7 +163,7 @@ class ShortCircuitEmptyConfigurationResolverSpec extends Specification {
         then:
         1 * resolutionStrategy.dependencyLockingEnabled >> true
         1 * resolutionStrategy.dependencyLockingProvider >> lockingProvider
-        1 * lockingProvider.loadLockState('lockedConf') >> lockingState
+        1 * lockingProvider.loadLockState('lockedConf', _) >> lockingState
         1 * lockingState.mustValidateLockState() >> true
         1 * lockingState.lockedDependencies >> [DefaultModuleComponentIdentifier.newId(DefaultModuleIdentifier.newId('org', 'foo'), '1.0')]
         1 * delegate.resolveGraph(resolveContext) >> delegateResults

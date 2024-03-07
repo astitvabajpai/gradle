@@ -80,6 +80,7 @@ class AndroidGradleRecipesKotlinSmokeTest extends AbstractSmokeTest {
                 compileSdkVersion(29)
                 buildToolsVersion("${TestedVersions.androidTools}")
                 buildFeatures { buildConfig = true }
+                kotlinOptions { jvmTarget = "1.8" }
             }
 
             androidComponents {
@@ -136,7 +137,9 @@ class AndroidGradleRecipesKotlinSmokeTest extends AbstractSmokeTest {
         result.task(":app:$taskName").outcome == TaskOutcome.SUCCESS
 
         and:
-        assertConfigurationCacheStateStored()
+        if (GradleContextualExecuter.isConfigCache()) {
+            result.assertConfigurationCacheStateStored()
+        }
 
         when: 'running the build for the 2nd time'
         result = (
@@ -149,7 +152,9 @@ class AndroidGradleRecipesKotlinSmokeTest extends AbstractSmokeTest {
         result.task(":app:$taskName").outcome == TaskOutcome.UP_TO_DATE
 
         and:
-        assertConfigurationCacheStateLoaded()
+        if (GradleContextualExecuter.isConfigCache()) {
+            result.assertConfigurationCacheStateLoaded()
+        }
 
         where:
         [agpVersion, provider] << [
@@ -170,7 +175,7 @@ class AndroidGradleRecipesKotlinSmokeTest extends AbstractSmokeTest {
             ]
         ].combinations()
         providerType = provider['type']
-        kotlinVersionNumber = VersionNumber.parse('1.7.0')
+        kotlinVersionNumber = VersionNumber.parse('1.8.0')
         taskName = 'compileDebugKotlin'
     }
 
@@ -202,7 +207,6 @@ class AndroidGradleRecipesKotlinSmokeTest extends AbstractSmokeTest {
             expectOrgGradleUtilWrapUtilDeprecation(kotlinVersionNumber)
             maybeExpectOrgGradleUtilGUtilDeprecation(agpVersion)
             expectAndroidWorkerExecutionSubmitDeprecationWarning(agpVersion)
-            expectProjectConventionDeprecationWarning(agpVersion)
             maybeExpectConventionTypeDeprecation(kotlinVersionNumber)
             expectAndroidConventionTypeDeprecationWarning(agpVersion)
             expectBasePluginConventionDeprecation(agpVersion)

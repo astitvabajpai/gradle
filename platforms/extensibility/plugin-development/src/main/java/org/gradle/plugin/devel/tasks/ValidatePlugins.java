@@ -21,7 +21,6 @@ import org.gradle.api.Incubating;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.problems.internal.InternalProblem;
 import org.gradle.api.problems.internal.InternalProblemReporter;
 import org.gradle.api.problems.internal.InternalProblems;
 import org.gradle.api.problems.internal.Problem;
@@ -115,7 +114,7 @@ public abstract class ValidatePlugins extends DefaultTask {
         if (problems.isEmpty()) {
             getLogger().info("Plugin validation finished without warnings.");
         } else {
-            if (getFailOnWarning().get() || problems.stream().anyMatch(problem -> problem.getSeverity() == ERROR)) {
+            if (getFailOnWarning().get() || problems.stream().anyMatch(problem -> problem.getDefinition().getSeverity() == ERROR)) {
                 if (getIgnoreFailures().get()) {
                     getLogger().warn("Plugin validation finished with errors. {} {}",
                         annotateTaskPropertiesDoc(),
@@ -137,10 +136,8 @@ public abstract class ValidatePlugins extends DefaultTask {
     private void reportProblems(List<? extends Problem> problems) {
         InternalProblemReporter reporter = getServices().get(InternalProblems.class).getInternalReporter();
         problems.stream()
-            .filter(InternalProblem.class::isInstance)
-            .map(InternalProblem.class::cast)
-            .map(problem -> problem.toBuilder()
-                .label(introductionFor(problem.getAdditionalData()) + problem.getLabel()).build())
+            .map(Problem.class::cast)
+            .map(problem -> problem.toBuilder().contextualLabel(introductionFor(problem.getAdditionalData()) + problem.getDefinition().getId().getDisplayName()).build())
             .forEach(reporter::report);
     }
 

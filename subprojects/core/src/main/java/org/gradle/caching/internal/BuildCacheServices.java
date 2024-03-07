@@ -25,7 +25,7 @@ import org.gradle.caching.configuration.internal.BuildCacheServiceRegistration;
 import org.gradle.caching.configuration.internal.DefaultBuildCacheConfiguration;
 import org.gradle.caching.configuration.internal.DefaultBuildCacheServiceRegistration;
 import org.gradle.caching.internal.controller.BuildCacheController;
-import org.gradle.caching.internal.controller.RootBuildCacheControllerRef;
+import org.gradle.caching.internal.controller.impl.RootBuildCacheControllerRef;
 import org.gradle.caching.internal.origin.OriginMetadataFactory;
 import org.gradle.caching.internal.packaging.BuildCacheEntryPacker;
 import org.gradle.caching.internal.packaging.impl.DefaultTarPackerFileSystemSupport;
@@ -38,7 +38,6 @@ import org.gradle.caching.internal.services.DefaultBuildCacheControllerFactory;
 import org.gradle.caching.local.DirectoryBuildCache;
 import org.gradle.caching.local.internal.DirectoryBuildCacheFileStoreFactory;
 import org.gradle.caching.local.internal.DirectoryBuildCacheServiceFactory;
-import org.gradle.internal.SystemProperties;
 import org.gradle.internal.file.BufferProvider;
 import org.gradle.internal.file.Deleter;
 import org.gradle.internal.file.FileException;
@@ -47,10 +46,8 @@ import org.gradle.internal.hash.ChecksumService;
 import org.gradle.internal.hash.StreamHasher;
 import org.gradle.internal.instantiation.InstantiatorFactory;
 import org.gradle.internal.nativeintegration.filesystem.FileSystem;
-import org.gradle.internal.nativeintegration.network.HostnameLookup;
 import org.gradle.internal.operations.BuildOperationExecutor;
 import org.gradle.internal.operations.BuildOperationProgressEventEmitter;
-import org.gradle.internal.os.OperatingSystem;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.resource.local.DefaultPathKeyFileStore;
 import org.gradle.internal.resource.local.PathKeyFileStore;
@@ -87,15 +84,11 @@ public final class BuildCacheServices extends AbstractPluginServiceRegistry {
             }
 
             OriginMetadataFactory createOriginMetadataFactory(
-                BuildInvocationScopeId buildInvocationScopeId,
-                HostnameLookup hostnameLookup
+                BuildInvocationScopeId buildInvocationScopeId
             ) {
                 return new OriginMetadataFactory(
-                    SystemProperties.getInstance().getUserName(),
-                    OperatingSystem.current().getName(),
                     buildInvocationScopeId.getId().asString(),
-                    properties -> properties.setProperty(GRADLE_VERSION_KEY, GradleVersion.current().getVersion()),
-                    hostnameLookup::getHostname
+                    properties -> properties.setProperty(GRADLE_VERSION_KEY, GradleVersion.current().getVersion())
                 );
             }
         });

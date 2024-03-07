@@ -69,6 +69,8 @@
 		--footer-text-color: #aaa;
 		--quoteblock-color: #1DA2BD;
 		--menu-burger-color: #242526;
+
+
 	}
 }
 
@@ -1504,28 +1506,26 @@ path {
 }
 
 .dark-mode {
+    /* Works on Firefox */
+    * {
+      scrollbar-width: auto;
+      scrollbar-color: #686868 #242526;
+    }
 
-	/* Works on Firefox */
-	.docs-navigation {
-		scrollbar-width: auto;
-		overflow-y: scroll;
-		scrollbar-color: #686868 #242526;
-	}
+    /* Works on Chrome, Edge, and Safari */
+    *::-webkit-scrollbar {
+      width: auto;
+    }
 
-	/* Works on Chrome, Edge, and Safari */
-	.docs-navigation::-webkit-scrollbar {
-		width: 12px;
-	}
+    *::-webkit-scrollbar-track {
+      background: #242526;
+    }
 
-	.docs-navigation::-webkit-scrollbar-track {
-		background: #242526;
-	}
-
-	.docs-navigation::-webkit-scrollbar-thumb {
-		background-color: #686868;
-		border-radius: 20px;
-		border: 3px #686868;
-	}
+    *::-webkit-scrollbar-thumb {
+      background-color: #686868;
+      border-radius: 20px;
+      border: 3px #686868;
+    }
 }
 
 /* Custom Admonition Blocks - Icons from https://github.com/primer/octicons */
@@ -2437,6 +2437,18 @@ div.unbreakable {
 	text-decoration: line-through;
 }
 
+.green {
+    color: #006000;
+}
+
+.red {
+    color: #bf0000;
+}
+
+.yellow {
+    color: #bfbf00;
+}
+
 span.icon>.fa {
 	cursor: default;
 }
@@ -3160,6 +3172,7 @@ div.screenshot {
 }
 
 .site-header__navigation {
+    z-index: 2;
 	display: flex;
 	flex-direction: column;
 }
@@ -3319,7 +3332,7 @@ div.screenshot {
 		-webkit-box-shadow: 0 2px 4px 0 var(--box-shadow-color);
 		-moz-box-shadow: 0 2px 4px 0 var(--box-shadow-color);
 		box-shadow: 0 2px 4px 0 var(--box-shadow-color);
-		z-index: 1;
+		z-index: 2;
 	}
 
 	.dark-mode {
@@ -3327,7 +3340,7 @@ div.screenshot {
 			-webkit-box-shadow: none;
 			-moz-box-shadow: none;
 			box-shadow: none;
-			z-index: 1;
+			z-index: 2;
 		}
 	}
 
@@ -3420,10 +3433,31 @@ div.screenshot {
 	border-right: 1px solid #e7e7e9;
 }
 
+@media (max-width: 768px) {
+    .dark-mode {
+        .algolia-autocomplete .algolia-docsearch-suggestion .algolia-docsearch-suggestion--subcategory-column {
+            color: #fff;
+        }
+    }
+}
+
 .dark-mode {
 	.docs-navigation {
 		border-right: 1px solid #242526;
 	}
+	.docs-navigation .search-input {
+    	background: var(--white-color) !important;
+    	color: var(--text-color);
+    }
+    .algolia-autocomplete .algolia-docsearch-suggestion {
+        background: var(--footer-white-color);
+    }
+    .algolia-autocomplete .algolia-docsearch-suggestion--subcategory-column {
+        color: #fff;
+    }
+    .algolia-autocomplete .algolia-docsearch-suggestion--highlight {
+        color: #287bdc;
+    }
 }
 
 .docs-navigation .search-container {
@@ -4102,6 +4136,7 @@ div.screenshot {
 		right: 0;
 		top: 65px;
 		width: 260px;
+		z-index: 1;
 		overflow: auto;
 		border-radius: 0 0 5px 0;
 		max-height: calc(100% - 118px);
@@ -4263,62 +4298,17 @@ code[data-lang="text"] .fun {
 }
 
 .dark-mode {
-	.pln {
-		color: #fff !important;
-	}
+    .com       { color: #909090 !important; }
+    .str, .tag { color: #90a959 !important; }
+    .kwd, .atv { color: #d28445 !important; }
+    .typ       { color: #f4bf75 !important; }
+    .lit, .atn { color: #6a9fb5 !important; }
+    .pun, .pln,
+    .opn, .clo { color: #d0d0d0 !important; }
+    .dec, .var { color: #aa759f !important; }
 }
 
 .dark-mode {
-	.str {
-		color: #f7f !important;
-	}
-
-	.kwd {
-		color: #ff7 !important;
-	}
-
-	.com {
-		color: #7ff !important;
-	}
-
-	.typ {
-		color: #9f9 !important;
-	}
-
-	.lit {
-		color: #f99 !important;
-	}
-
-	.pun,
-	.opn,
-	.clo {
-		color: #99f !important;
-	}
-
-	.tag {
-		color: #ff7 !important;
-	}
-
-	.atn {
-		color: #9f9 !important;
-	}
-
-	.atv {
-		color: #f7f !important;
-	}
-
-	.dec,
-	.var {
-		color: #9f9 !important;
-	}
-
-	.fun {
-		color: green !important;
-	}
-}
-
-.dark-mode {
-
 	li.L1,
 	li.L3,
 	li.L5,

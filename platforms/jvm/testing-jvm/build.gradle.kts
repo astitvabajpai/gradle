@@ -10,30 +10,42 @@ This project is a implementation dependency of many other testing-related subpro
 dependency for any projects working directly with Test tasks.
 """
 
+errorprone {
+    disabledChecks.addAll(
+        "EmptyBlockTag", // 1 occurrences
+    )
+}
+
 dependencies {
+    api(project(":base-annotations"))
+    api(project(":base-services"))
+    api(project(":core"))
+    api(project(":core-api"))
+    api(project(":logging"))
+    api(project(":messaging"))
+    api(project(":process-services"))
+    api(project(":reporting"))
     api(project(":testing-base"))
+    api(project(":toolchains-jvm"))
 
-    implementation(project(":functional"))
-    implementation(project(":base-services"))
-    implementation(project(":messaging"))
-    implementation(project(":logging"))
+    api(libs.asm)
+    api(libs.groovy)
+    api(libs.groovyXml)
+    api(libs.inject)
+    api(libs.jsr305)
+
     implementation(project(":file-temp"))
+    implementation(project(":functional"))
+    implementation(project(":logging-api"))
     implementation(project(":model-core"))
-    implementation(project(":core"))
-    implementation(project(":reporting"))
     implementation(project(":platform-base"))
-    implementation(project(":platform-jvm"))
     implementation(project(":testing-jvm-infrastructure"))
-    implementation(project(":toolchains-jvm"))
 
-    implementation(libs.slf4jApi)
-    implementation(libs.groovy)
-    implementation(libs.groovyXml)
-    implementation(libs.guava)
-    implementation(libs.commonsLang)
     implementation(libs.commonsIo)
-    implementation(libs.asm)
-    implementation(libs.inject)
+    implementation(libs.commonsLang)
+    implementation(libs.guava)
+    implementation(libs.junit)
+    implementation(libs.slf4jApi)
 
     testImplementation(testFixtures(project(":core")))
     testImplementation(testFixtures(project(":model-core")))

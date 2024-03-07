@@ -89,6 +89,6 @@ public class DefaultNodeValidator implements NodeValidator {
     }
 
     private static boolean isWarning(Problem problem) {
-        return problem.getSeverity().equals(Severity.WARNING);
+        return problem.getDefinition().getSeverity().equals(Severity.WARNING);
     }
 }

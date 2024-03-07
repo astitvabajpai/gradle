@@ -16,6 +16,7 @@
 package org.gradle.launcher.daemon.server;
 
 import com.google.common.collect.ImmutableList;
+import org.gradle.api.internal.tasks.userinput.UserInputReader;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.internal.agents.AgentStatus;
@@ -44,6 +45,7 @@ import org.gradle.launcher.daemon.server.api.DaemonCommandAction;
 import org.gradle.launcher.daemon.server.api.HandleInvalidateVirtualFileSystem;
 import org.gradle.launcher.daemon.server.api.HandleReportStatus;
 import org.gradle.launcher.daemon.server.api.HandleStop;
+import org.gradle.launcher.daemon.server.exec.CleanUpVirtualFileSystemAfterBuild;
 import org.gradle.launcher.daemon.server.exec.DaemonCommandExecuter;
 import org.gradle.launcher.daemon.server.exec.EstablishBuildEnvironment;
 import org.gradle.launcher.daemon.server.exec.ExecuteBuild;
@@ -97,6 +99,7 @@ public class DaemonServices extends DefaultServiceRegistry {
 
         builder.setDaemonOpts(configuration.getJvmOptions());
         builder.setApplyInstrumentationAgent(agentStatus.isAgentInstrumentationEnabled());
+        builder.setUseNativeServices(configuration.useNativeServices());
 
         return builder.create();
     }
@@ -136,26 +139,36 @@ public class DaemonServices extends DefaultServiceRegistry {
         return GarbageCollectorMonitoringStrategy.determineGcStrategy();
     }
 
-    protected ImmutableList<DaemonCommandAction> createDaemonCommandActions(DaemonContext daemonContext, ProcessEnvironment processEnvironment, DaemonHealthStats healthStats, DaemonHealthCheck healthCheck, BuildExecuter buildActionExecuter, DaemonRunningStats runningStats) {
+    protected ImmutableList<DaemonCommandAction> createDaemonCommandActions(
+        BuildExecuter buildActionExecuter,
+        DaemonContext daemonContext,
+        DaemonHealthCheck healthCheck,
+        DaemonHealthStats healthStats,
+        DaemonRunningStats runningStats,
+        ExecutorFactory executorFactory,
+        ProcessEnvironment processEnvironment,
+        UserInputReader inputReader
+    ) {
         File daemonLog = getDaemonLogFile();
         DaemonDiagnostics daemonDiagnostics = new DaemonDiagnostics(daemonLog, daemonContext.getPid());
+        GradleUserHomeScopeServiceRegistry userHomeServiceRegistry = get(GradleUserHomeScopeServiceRegistry.class);
         return ImmutableList.of(
             new HandleStop(get(ListenerManager.class)),
-            new HandleInvalidateVirtualFileSystem(get(GradleUserHomeScopeServiceRegistry.class)),
+            new HandleInvalidateVirtualFileSystem(userHomeServiceRegistry),
             new HandleCancel(),
             new HandleReportStatus(),
+            new CleanUpVirtualFileSystemAfterBuild(executorFactory, userHomeServiceRegistry),
             new ReturnResult(),
             new StartBuildOrRespondWithBusy(daemonDiagnostics), // from this point down, the daemon is 'busy'
             new EstablishBuildEnvironment(processEnvironment),
             new LogToClient(loggingManager, daemonDiagnostics), // from this point down, logging is sent back to the client
             new LogAndCheckHealth(healthStats, healthCheck, runningStats),
-            new ForwardClientInput(),
+            new ForwardClientInput(inputReader),
             new RequestStopIfSingleUsedDaemon(),
             new ResetDeprecationLogger(),
             new WatchForDisconnection(),
             new ExecuteBuild(buildActionExecuter, runningStats)
         );
-
     }
 
     Serializer<BuildAction> createBuildActionSerializer() {

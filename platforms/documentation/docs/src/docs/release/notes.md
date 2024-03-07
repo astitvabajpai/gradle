@@ -52,37 +52,66 @@ Example:
 ADD RELEASE FEATURES BELOW
 vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv -->
 
-### Configuration cache
+#### Ability to set conventions on file collections
 
-The [configuration cache](userguide/configuration_cache.html) improves build time by caching the result of the configuration phase and reusing it for subsequent builds.
-This feature can significantly improve build performance.
+Plugin-provided tasks often expose file collections that are meant to be customizable by build engineers (for instance, the classpath for the JavaCompile task).
+Up until now, for plugin authors to define default values for file collections, they have had to resort to configuring those defaults as initial values.
+Conventions provide a better model for that: plugin authors recommend default values via conventions, and users choose to accept, add on top, or completely 
+replace them when defining their actual value.
 
-#### Supporting standard streams as task property values
+This release introduces a  pair of [`convention(...)`](javadoc/org/gradle/api/file/ConfigurableFileCollection.html#convention-java.lang.Object...-) methods 
+on `ConfigurableFileCollection` that define the default value of a file collection if no explicit value is previously set via `setFrom(...)` or `from(...)`.
 
-The standard streams (`System.in`, `System.out`, and `System.err`) can now be used as
-`standardInput`, `standardOutput`, and `errorOutput` of [`Exec`](javadoc/org/gradle/api/tasks/Exec.html) and [`JavaExec`](javadoc/org/gradle/api/tasks/JavaExec.html) tasks.
-Other tasks with properties of types `java.io.InputStream` and `java.io.OutputStream` can also use the standard streams as property values.
-Setting up custom standard streams with `System.setIn`, `System.setOut` and `System.setErr` isn't supported.
+```kotlin
+val files = objects.fileCollection().convention("dir1")
+files.from("dir2")
 
-### Documentation
+println(files.elements.get()) // [.../dir1, .../dir2]
+```
 
-#### Kotlin DSL Reference
+`#from(...)` will honor the convention if one is configured when invoked, so the order of operations will matter. 
 
-Content derived from Javadoc contains a "Since" section now, specifying the Gradle version when the particular functionality has been introduced.
-The information comes from `@since` tags in the Javadoc, but which weren't displayed until now. 
+To forcefully override or prevent a convention (i.e., regardless of the order of those operations), one should use `#setFrom()` instead:
 
+```kotlin
+val files = objects.fileCollection().convention("dir1")
+files.setFrom("dir2")
+
+
+println(files.elements.get()) // [.../dir2]
+```
+
+This feature caters to plugin developers.
+It is analogous to the [`convention(...)`](javadoc/org/gradle/api/provider/Property.html#convention-T-) methods that have been available on lazy properties since Gradle 5.1.
+
+#### Improved error handling for toolchain resolvers
+
+When attempting to download Java toolchains from the configured resolvers, errors will be better handled now, and all resolvers will be tried.
+
+While mapping toolchain specs to download URLs, resolvers aren't supposed to throw exceptions. 
+But it is possible for them to do that, and when it happens, Gradle should try to use other configured resolvers in their stead.
+However, it wasn't the case before this fix.
+
+Also, auto-provisioning can fail even after a successful toolchain spec to URL mapping (for example, during the actual download and validating of the toolchain)
+In such a case, Gradle should retry the auto-provisioning process with other configured resolvers.
+This was also not the case before the fix.
+
+
+<a name="other"></a>
 ### Other improvements
 
-#### Generating tidy projects with Gradle init
+#### Tests metadata improvements in tooling API
 
-Using the new `--no-comments` option allows generating projects that contain only code without clarifying comments.
-The resulting build files and source files are smaller and less noisy.
+IDEs and other tools leverage the tooling API to access information about tests executed by Gradle.
+Each test event sent via the tooling API includes a test descriptor containing metadata such as a human-readable name, class name, and method name.
 
-```
-gradle init --use-defaults --type kotlin-library --no-comments
-```
+We introduced a new method to the `TestOperationDescriptor` interface to provide the test display name – `getTestDisplayName`.
+It returns the display name of the test that can be used by IDEs to present the test in a human-readable format.
+It is transparently passed from the frameworks, enabling IDEs to use them without requiring transformations.
+Previously, the display name could be obtained only by parsing the operation display name, which was not always reliable.
 
-It is possible to persist the preference by setting the `org.gradle.buildinit.comments` property to `false`.
+Additionally, for JUnit5 and Spock, we updated the test descriptor for dynamic and parameterized tests to include information about the class name and method name containing the test.
+These enhancements enable IDEs to offer improved navigation and reporting capabilities for dynamic and parameterized tests.
 
 
 <!-- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

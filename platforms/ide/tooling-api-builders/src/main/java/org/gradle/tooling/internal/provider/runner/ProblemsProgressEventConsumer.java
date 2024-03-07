@@ -17,6 +17,8 @@
 package org.gradle.tooling.internal.provider.runner;
 
 import org.gradle.api.NonNullApi;
+import org.gradle.api.problems.ProblemGroup;
+import org.gradle.api.problems.ProblemId;
 import org.gradle.api.problems.Severity;
 import org.gradle.api.problems.internal.DefaultProblemProgressDetails;
 import org.gradle.api.problems.internal.DocLink;
@@ -25,12 +27,13 @@ import org.gradle.api.problems.internal.LineInFileLocation;
 import org.gradle.api.problems.internal.OffsetInFileLocation;
 import org.gradle.api.problems.internal.PluginIdLocation;
 import org.gradle.api.problems.internal.Problem;
-import org.gradle.api.problems.internal.ProblemCategory;
 import org.gradle.api.problems.internal.ProblemLocation;
 import org.gradle.api.problems.internal.TaskPathLocation;
+import org.gradle.internal.Pair;
 import org.gradle.internal.build.event.types.DefaultAdditionalData;
 import org.gradle.internal.build.event.types.DefaultDetails;
 import org.gradle.internal.build.event.types.DefaultDocumentationLink;
+import org.gradle.internal.build.event.types.DefaultFailure;
 import org.gradle.internal.build.event.types.DefaultLabel;
 import org.gradle.internal.build.event.types.DefaultProblemCategory;
 import org.gradle.internal.build.event.types.DefaultProblemDescriptor;
@@ -40,6 +43,7 @@ import org.gradle.internal.build.event.types.DefaultSeverity;
 import org.gradle.internal.build.event.types.DefaultSolution;
 import org.gradle.internal.operations.OperationIdentifier;
 import org.gradle.internal.operations.OperationProgressEvent;
+import org.gradle.tooling.internal.protocol.InternalFailure;
 import org.gradle.tooling.internal.protocol.InternalProblemEvent;
 import org.gradle.tooling.internal.protocol.problem.InternalAdditionalData;
 import org.gradle.tooling.internal.protocol.problem.InternalDetails;
@@ -51,6 +55,8 @@ import org.gradle.tooling.internal.protocol.problem.InternalSeverity;
 import org.gradle.tooling.internal.protocol.problem.InternalSolution;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,16 +102,25 @@ public class ProblemsProgressEventConsumer extends ClientForwardingBuildOperatio
         return new DefaultProblemEvent(
             cerateDefaultProblemDescriptor(buildOperationId),
             new DefaultProblemDetails(
-                toInternalCategory(problem.getCategory()),
-                toInternalLabel(problem.getLabel()),
+                toInternalCategory(problem.getDefinition().getId()),
+                toInternalLabel(problem.getDefinition().getId().getDisplayName(), problem.getContextualLabel()),
                 toInternalDetails(problem.getDetails()),
-                toInternalSeverity(problem.getSeverity()),
+                toInternalSeverity(problem.getDefinition().getSeverity()),
                 toInternalLocations(problem.getLocations()),
-                toInternalDocumentationLink(problem.getDocumentationLink()),
+                toInternalDocumentationLink(problem.getDefinition().getDocumentationLink()),
                 toInternalSolutions(problem.getSolutions()),
-                toInternalAdditionalData(problem.getAdditionalData())
+                toInternalAdditionalData(problem.getAdditionalData()),
+                toInternalFailure(problem.getException())
             )
         );
+    }
+
+    @Nullable
+    private static InternalFailure toInternalFailure(@Nullable RuntimeException ex) {
+        if (ex == null) {
+            return null;
+        }
+        return DefaultFailure.fromThrowable(ex);
     }
 
     private DefaultProblemDescriptor cerateDefaultProblemDescriptor(OperationIdentifier parentBuildOperationId) {
@@ -114,12 +129,28 @@ public class ProblemsProgressEventConsumer extends ClientForwardingBuildOperatio
             parentBuildOperationId);
     }
 
-    private static InternalProblemCategory toInternalCategory(ProblemCategory category) {
-        return new DefaultProblemCategory(category.getNamespace(), category.getCategory(), category.getSubcategories());
+    private static InternalProblemCategory toInternalCategory(ProblemId problemId) {
+        Pair<String, List<String>> categories = categories(problemId);
+        String rootCategory = categories.getLeft();
+        List<String> subcategories = categories.getRight();
+        return new DefaultProblemCategory("", rootCategory, subcategories); // TODO look at problem category in Tooling API events
     }
 
-    private static InternalLabel toInternalLabel(String label) {
-        return new DefaultLabel(label);
+    private static Pair<String, List<String>> categories(ProblemId problemId) {
+        List<String> categories = new ArrayList<>();
+        // put the problem id at the beginning of the list
+        categories.add(0, problemId.getName());
+        ProblemGroup current = problemId.getParent();
+        while (current != null) {
+            categories.add(0, current.getName());
+            current = current.getParent();
+        }
+        Collections.reverse(categories);
+        return Pair.of(categories.get(0), new ArrayList<>(categories.subList(1, categories.size()))); // ArrayList$SubList is not serializable, hence the new ArrayList instance
+    }
+
+    private static InternalLabel toInternalLabel(String label, @Nullable String contextualLabel) {
+        return new DefaultLabel(contextualLabel == null ? label : contextualLabel);
     }
 
     private static @Nullable InternalDetails toInternalDetails(@Nullable String details) {

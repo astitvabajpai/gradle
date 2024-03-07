@@ -35,7 +35,7 @@ public class ValidationFinishedContext extends BeforeExecutionContext {
     /**
      * Returns the list of validation warnings encountered so far.
      */
-    public ImmutableList<? extends  Problem> getValidationProblems() {
+    public ImmutableList<? extends Problem> getValidationProblems() {
         return validationProblems;
     }
 }

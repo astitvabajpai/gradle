@@ -16,7 +16,6 @@
 
 package org.gradle.problems.internal.transformers;
 
-import org.gradle.api.problems.internal.InternalProblem;
 import org.gradle.api.problems.internal.Problem;
 import org.gradle.api.problems.internal.ProblemTransformer;
 import org.gradle.internal.operations.OperationIdentifier;
@@ -32,7 +31,7 @@ public class StackLocationTransformer implements ProblemTransformer {
     }
 
     @Override
-    public Problem transform(InternalProblem problem, OperationIdentifier id) {
+    public Problem transform(Problem problem, OperationIdentifier id) {
         if (problem.getException() == null) {
             return problem;
         }

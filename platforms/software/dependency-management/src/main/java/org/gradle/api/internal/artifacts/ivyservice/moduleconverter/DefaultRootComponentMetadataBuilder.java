@@ -173,6 +173,7 @@ public class DefaultRootComponentMetadataBuilder implements RootComponentMetadat
         return factory.create(provider);
     }
 
+    @Override
     public MutationValidator getValidator() {
         return holder;
     }
@@ -191,8 +192,8 @@ public class DefaultRootComponentMetadataBuilder implements RootComponentMetadat
         @Override
         public void validateMutation(MutationType type) {
             if (type == MutationType.DEPENDENCIES || type == MutationType.ARTIFACTS ||
-                type == MutationType.DEPENDENCY_ATTRIBUTES || type == MutationType.USAGE ||
-                type == MutationType.HIERARCHY
+                type == MutationType.DEPENDENCY_ATTRIBUTES || type == MutationType.DEPENDENCY_CONSTRAINT_ATTRIBUTES ||
+                type == MutationType.USAGE || type == MutationType.HIERARCHY
             ) {
                 LocalComponentGraphResolveState value = currentValue();
                 if (value != null) {

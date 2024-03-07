@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableSet;
 import org.gradle.api.Action;
 import org.gradle.api.Transformer;
 import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.file.FileCollectionConfigurer;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.file.CompositeFileCollection;
 import org.gradle.api.internal.file.FileCollectionInternal;
@@ -79,7 +78,7 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         this.resolver = fileResolver;
         this.dependencyFactory = dependencyFactory;
         this.host = host;
-        this.valueState = ValueState.newState(host);
+        this.valueState = ValueState.newState(host, ValueCollector::isolated);
         init(EMPTY_COLLECTOR, EMPTY_COLLECTOR);
         filesWrapper = new PathSet();
         buildDependency = dependencyFactory.configurableDependency();
@@ -90,11 +89,9 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         this.value = initialValue;
     }
 
-    @Override
-    public ConfigurableFileCollection withActualValue(Action<FileCollectionConfigurer> action) {
+    protected void withActualValue(Action<Configurer> action) {
         setToConventionIfUnset();
-        action.execute(getExplicitValue());
-        return this;
+        action.execute(getConfigurer());
     }
 
     @Override
@@ -146,10 +143,12 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         valueState.finalizeOnNextGet();
     }
 
+    @Override
     public void disallowUnsafeRead() {
         valueState.disallowUnsafeRead();
     }
 
+    @Override
     public int getFactoryId() {
         return ManagedFactories.ConfigurableFileCollectionManagedFactory.FACTORY_ID;
     }
@@ -331,9 +330,7 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
     }
 
     private ValueCollector copySources(ValueCollector conventionCollector) {
-        Collection<Object> source = new LinkedHashSet<>();
-        conventionCollector.collectSource(source);
-        return newValue(EMPTY_COLLECTOR, source);
+        return conventionCollector.isolated();
     }
 
     private ValueCollector newValue(ValueCollector baseValue, Object[] paths) {
@@ -346,7 +343,7 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
 
     @Override
     public ConfigurableFileCollection from(Object... paths) {
-        getExplicitValue().from(paths);
+        withActualValue(it -> it.from(paths));
         return this;
     }
 
@@ -432,8 +429,8 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         return valueState.explicitValue(value, defaultValue);
     }
 
-    private FileCollectionConfigurer getExplicitValue() {
-        return new ExplicitValueConfigurer();
+    private Configurer getConfigurer() {
+        return new Configurer();
     }
 
     @VisibleForTesting
@@ -492,6 +489,11 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         List<Object> replace(FileCollectionInternal original, Supplier<FileCollectionInternal> supplier);
 
         boolean isEmpty();
+
+        /**
+         * Returns a shallow copy of this value collector, to avoid sharing mutable data.
+         */
+        ValueCollector isolated();
     }
 
     private static class EmptyCollector implements ValueCollector {
@@ -533,6 +535,11 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         public List<Object> replace(FileCollectionInternal original, Supplier<FileCollectionInternal> supplier) {
             return null;
         }
+
+        @Override
+        public ValueCollector isolated() {
+            return this;
+        }
     }
 
     private static class UnresolvedItemsCollector implements ValueCollector {
@@ -553,6 +560,21 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
             this.taskDependencyFactory = taskDependencyFactory;
             this.patternSetFactory = patternSetFactory;
             Collections.addAll(items, item);
+        }
+
+        /**
+         * A copy constructor.
+         */
+        private UnresolvedItemsCollector(UnresolvedItemsCollector another) {
+            this.resolver = another.resolver;
+            this.taskDependencyFactory = another.taskDependencyFactory;
+            this.patternSetFactory = another.patternSetFactory;
+            items.addAll(another.items);
+        }
+
+        @Override
+        public ValueCollector isolated() {
+            return new UnresolvedItemsCollector(this);
         }
 
         @Override
@@ -692,6 +714,11 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         public List<Object> replace(FileCollectionInternal original, Supplier<FileCollectionInternal> supplier) {
             return null;
         }
+
+        @Override
+        public ValueCollector isolated() {
+            return this;
+        }
     }
 
     private class PathSet extends AbstractSet<Object> {
@@ -757,31 +784,22 @@ public class DefaultConfigurableFileCollection extends CompositeFileCollection i
         }
     }
 
-    private abstract class Configurer implements FileCollectionConfigurer {
+    private class Configurer {
 
-        protected abstract ValueCollector getValue();
+        protected ValueCollector getValue() {
+            return getExplicitCollector();
+        }
 
-        protected abstract void setValue(ValueCollector newValue);
+        protected void setValue(ValueCollector newValue) {
+            setExplicitCollector(newValue);
+        }
 
-        @Override
-        public FileCollectionConfigurer from(Object... paths) {
+        public Configurer from(Object... paths) {
             assertMutable();
             if (paths.length > 0) {
                 setValue(getValue().plus(DefaultConfigurableFileCollection.this, resolver, patternSetFactory, dependencyFactory, host, paths));
             }
             return this;
-        }
-    }
-
-    private class ExplicitValueConfigurer extends Configurer {
-        @Override
-        protected ValueCollector getValue() {
-            return getExplicitCollector();
-        }
-
-        @Override
-        protected void setValue(ValueCollector newValue) {
-            setExplicitCollector(newValue);
         }
     }
 }

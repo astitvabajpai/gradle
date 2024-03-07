@@ -16,6 +16,7 @@
 
 package org.gradle.api.problems.internal;
 
+import org.gradle.api.problems.ProblemGroup;
 import org.gradle.api.problems.Severity;
 
 public interface InternalProblemBuilder extends InternalProblemSpec {
@@ -28,16 +29,19 @@ public interface InternalProblemBuilder extends InternalProblemSpec {
     Problem build();
 
     @Override
+    InternalProblemBuilder id(String name, String displayName);
+
+    @Override
+    InternalProblemBuilder id(String name, String displayName, ProblemGroup parent);
+
+    @Override
     InternalProblemBuilder taskPathLocation(String buildTreePath);
 
     @Override
-    InternalProblemBuilder label(String label);
-
-    @Override
-    InternalProblemBuilder category(String category, String... details);
-
-    @Override
     InternalProblemBuilder documentedAt(DocLink doc);
+
+    @Override
+    InternalProblemBuilder contextualLabel(String contextualLabel);
 
     @Override
     InternalProblemBuilder documentedAt(String url);

@@ -2,6 +2,12 @@ plugins {
     id("gradlebuild.distribution.api-java")
 }
 
+errorprone {
+    disabledChecks.addAll(
+        "UnusedMethod", // 7 occurrences
+    )
+}
+
 dependencies {
     implementation(project(":base-services"))
     implementation(project(":logging"))
@@ -9,9 +15,11 @@ dependencies {
     implementation(project(":file-collections"))
     implementation(project(":core-api"))
     implementation(project(":core"))
+    implementation(project(":core-jvm"))
     implementation(project(":dependency-management"))
     implementation(project(":build-option"))
     implementation(project(":problems-api"))
+    implementation(project(":functional"))
 
     implementation(libs.groovy)
     implementation(libs.guava)

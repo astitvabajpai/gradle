@@ -4,6 +4,13 @@ plugins {
 
 description = "Infrastructure for starting and managing worker processes"
 
+errorprone {
+    disabledChecks.addAll(
+        "URLEqualsHashCode", // 1 occurrences
+        "UnusedMethod", // 16 occurrences
+    )
+}
+
 dependencies {
     implementation(project(":base-services"))
     implementation(project(":messaging"))
@@ -46,5 +53,7 @@ dependencies {
     testRuntimeOnly(project(":distributions-core")) {
         because("Tests instantiate DefaultClassLoaderRegistry which requires a 'gradle-plugins.properties' through DefaultPluginModuleRegistry")
     }
-    integTestDistributionRuntimeOnly(project(":distributions-core"))
+    integTestDistributionRuntimeOnly(project(":distributions-jvm")) {
+        because("Uses application plugin.")
+    }
 }

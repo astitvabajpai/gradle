@@ -40,10 +40,10 @@ public class DeprecationMessageBuilder<T extends DeprecationMessageBuilder<T>> {
     }
 
     public static WithDocumentation withDocumentation(Problem warning, WithDeprecationTimeline withDeprecationTimeline) {
-        DocLink docLink = warning.getDocumentationLink();
+        DocLink docLink = warning.getDefinition().getDocumentationLink();
         if (docLink != null) {
             return withDeprecationTimeline
-                .withDocumentation(warning.getDocumentationLink());
+                .withDocumentation(warning.getDefinition().getDocumentationLink());
         }
         return withDeprecationTimeline.undocumented();
     }
@@ -244,6 +244,7 @@ public class DeprecationMessageBuilder<T extends DeprecationMessageBuilder<T>> {
             /**
              * Output: See DSL_REFERENCE_URL for more details.
              */
+            @CheckReturnValue
             public WithDocumentation withDslReference() {
                 setDocumentation(Documentation.dslReference(propertyClass, property));
                 return new WithDocumentation(builder);
@@ -495,6 +496,7 @@ public class DeprecationMessageBuilder<T extends DeprecationMessageBuilder<T>> {
         /**
          * Output: This behavior is scheduled to be removed in Gradle 9.0.
          */
+        @Override
         public WithDeprecationTimeline willBeRemovedInGradle9() {
             setDeprecationTimeline(DeprecationTimeline.behaviourWillBeRemovedInVersion(GRADLE9));
             return new WithDeprecationTimeline(this);

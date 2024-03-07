@@ -20,13 +20,13 @@ import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.internal.DocumentationRegistry;
 import org.gradle.api.logging.configuration.WarningMode;
-import org.gradle.api.problems.internal.Problem;
 import org.gradle.api.problems.ProblemSpec;
 import org.gradle.api.problems.Problems;
-import org.gradle.api.problems.internal.DefaultProblemCategory;
+import org.gradle.api.problems.internal.GradleCoreProblemGroup;
 import org.gradle.api.problems.internal.InternalProblemReporter;
 import org.gradle.api.problems.internal.InternalProblemSpec;
 import org.gradle.api.problems.internal.InternalProblems;
+import org.gradle.api.problems.internal.Problem;
 import org.gradle.internal.SystemProperties;
 import org.gradle.internal.deprecation.DeprecatedFeatureUsage;
 import org.gradle.internal.logging.LoggingConfigurationBuildOptions;
@@ -34,10 +34,8 @@ import org.gradle.internal.operations.BuildOperationProgressEventEmitter;
 import org.gradle.internal.problems.NoOpProblemDiagnosticsFactory;
 import org.gradle.problems.Location;
 import org.gradle.problems.ProblemDiagnostics;
-import org.gradle.problems.buildtree.ProblemDiagnosticsFactory;
 import org.gradle.problems.buildtree.ProblemStream;
 import org.gradle.util.internal.DefaultGradleVersion;
-import org.gradle.util.internal.TextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,11 +66,9 @@ public class LoggingDeprecatedFeatureHandler implements FeatureHandler<Deprecate
     private Problems problemsService;
     private GradleException error;
 
-    public void init(ProblemDiagnosticsFactory problemDiagnosticsFactory, WarningMode warningMode, BuildOperationProgressEventEmitter progressEventEmitter, Problems problemsService) {
+    public void init(WarningMode warningMode, BuildOperationProgressEventEmitter progressEventEmitter, Problems problemsService, ProblemStream problemStream) {
         this.warningMode = warningMode;
-        this.problemStream = warningMode.shouldDisplayMessages()
-            ? problemDiagnosticsFactory.newUnlimitedStream()
-            : problemDiagnosticsFactory.newStream();
+        this.problemStream = problemStream;
         this.progressEventEmitter = progressEventEmitter;
         this.problemsService = problemsService;
     }
@@ -95,12 +91,18 @@ public class LoggingDeprecatedFeatureHandler implements FeatureHandler<Deprecate
                 @Override
                 public void execute(InternalProblemSpec builder) {
                     ProblemSpec problemSpec = builder
-                        .label(usage.formattedMessage())
+                        // usage.getKind() could be be part of the problem ID, however it provides hints on the problem provenance which should be modeled differently, maybe as location data.
+                        .id("deprecated-feature-used", "Deprecated feature used", GradleCoreProblemGroup.deprecation())
+                        .contextualLabel(usage.getSummary())
                         .documentedAt(usage.getDocumentationUrl());
                     addPossibleLocation(diagnostics, problemSpec);
-                    // TODO (donat) we can further categorize deprecation warnings https://github.com/gradle/gradle/issues/26928
-                    problemSpec.category(DefaultProblemCategory.DEPRECATION, TextUtil.screamingSnakeToKebabCase(usage.getType().name()))
-                        .severity(WARNING);
+                    problemSpec.severity(WARNING);
+                    if(usage.getAdvice() != null) {
+                        problemSpec.solution(usage.getAdvice());
+                    }
+                    if(usage.getContextualAdvice() != null) {
+                        problemSpec.solution(usage.getContextualAdvice());
+                    }
                 }
             });
             reporter.report(problem);
