@@ -47,6 +47,8 @@ import org.gradle.internal.deprecation.DeprecationLogger;
 import org.gradle.internal.model.CalculatedValueContainerFactory;
 import org.gradle.internal.reflect.Instantiator;
 
+import java.util.function.Supplier;
+
 /**
  * Default implementation of {@link ResolutionOutputsInternal}. This class is in charge of
  * converting internal results in the form of {@link ResolverResults} into public facing types like:
@@ -68,6 +70,12 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
     private final ImmutableAttributesFactory attributesFactory;
     private final Instantiator instantiator;
 
+    // Used to implement the deprecated ArtifactView#getAttributes method.
+    // This is an _input_ of resolution, however ResolutionOutputs is intended to
+    // be a function only of the _outputs_ of resolution.
+    // Avoid using this field. This will be removed.
+    private final Supplier<ImmutableAttributes> graphResolutionAttributesSupplier;
+
     private FileCollectionInternal intrinsicFiles;
 
     public DefaultResolutionOutputs(
@@ -76,7 +84,8 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
         TaskDependencyFactory taskDependencyFactory,
         CalculatedValueContainerFactory calculatedValueContainerFactory,
         ImmutableAttributesFactory attributesFactory,
-        Instantiator instantiator
+        Instantiator instantiator,
+        Supplier<ImmutableAttributes> graphResolutionAttributesSupplier
     ) {
         this.resultProvider = resultProvider;
         this.resolutionHost = resolutionHost;
@@ -84,6 +93,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
         this.calculatedValueContainerFactory = calculatedValueContainerFactory;
         this.attributesFactory = attributesFactory;
         this.instantiator = instantiator;
+        this.graphResolutionAttributesSupplier = graphResolutionAttributesSupplier;
     }
 
     @Override
@@ -144,6 +154,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
             viewConfiguration.reselectVariants,
             viewConfiguration.viewAttributes.asImmutable(),
 
+            graphResolutionAttributesSupplier,
             resultProvider,
             attributesFactory,
             calculatedValueContainerFactory,
@@ -162,6 +173,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
         private final ImmutableAttributes viewAttributes;
 
         // Services
+        private final Supplier<ImmutableAttributes> graphResolutionAttributesSupplier;
         private final ResolutionResultProvider<ResolverResults> resultProvider;
         private final ImmutableAttributesFactory attributesFactory;
         private final CalculatedValueContainerFactory calculatedValueContainerFactory;
@@ -174,6 +186,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
             boolean reselectVariants,
             ImmutableAttributes viewAttributes,
 
+            Supplier<ImmutableAttributes> graphResolutionAttributesSupplier,
             ResolutionResultProvider<ResolverResults> resultProvider,
             ImmutableAttributesFactory attributesFactory,
             CalculatedValueContainerFactory calculatedValueContainerFactory,
@@ -185,6 +198,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
             this.reselectVariants = reselectVariants;
             this.viewAttributes = viewAttributes;
 
+            this.graphResolutionAttributesSupplier = graphResolutionAttributesSupplier;
             this.resultProvider = resultProvider;
             this.attributesFactory = attributesFactory;
             this.calculatedValueContainerFactory = calculatedValueContainerFactory;
@@ -217,8 +231,9 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
             // If we are using the original request attributes, variant matching should not fail.
             boolean allowNoMatchingVariants = !viewAttributes.isEmpty();
 
+            ImmutableAttributes baseAttributes = results.getVisitedGraph().getResolutionResult().getRequestedAttributes();
             return results.getVisitedArtifacts().select(new ArtifactSelectionSpec(
-                computeViewAttributes(results),
+                computeViewAttributes(baseAttributes),
                 componentFilter,
                 reselectVariants,
                 allowNoMatchingVariants,
@@ -226,8 +241,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
             ));
         }
 
-        private ImmutableAttributes computeViewAttributes(ResolverResults results) {
-            ImmutableAttributes baseAttributes = results.getVisitedGraph().getResolutionResult().getRequestedAttributes();
+        private ImmutableAttributes computeViewAttributes(ImmutableAttributes baseAttributes) {
 
             // The user did not specify any attributes. Use the original request attributes.
             if (viewAttributes.isEmpty()) {
@@ -251,7 +265,7 @@ public class DefaultResolutionOutputs implements ResolutionOutputsInternal {
                 .withUpgradeGuideSection(8, "deprecate_artifact_view_get_attributes")
                 .nagUser();
 
-            return computeViewAttributes(resultProvider.getValue());
+            return computeViewAttributes(graphResolutionAttributesSupplier.get());
         }
     }
 

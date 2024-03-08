@@ -303,7 +303,11 @@ public abstract class DefaultConfiguration extends AbstractFileCollection implem
             taskDependencyFactory,
             calculatedValueContainerFactory,
             attributesFactory,
-            instantiator
+            instantiator,
+            () -> {
+                configurationAttributes.freeze();
+                return configurationAttributes.asImmutable();
+            }
         );
 
         this.resolvableDependencies = instantiator.newInstance(ConfigurationResolvableDependencies.class, this);
