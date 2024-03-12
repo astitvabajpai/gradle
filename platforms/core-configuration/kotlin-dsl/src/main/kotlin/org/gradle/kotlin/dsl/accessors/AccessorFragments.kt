@@ -720,6 +720,8 @@ fun fragmentsForExtension(accessor: Accessor.ForExtension): Fragments {
             ),
             bytecode = {
                 publicStaticMethod(signature) {
+                    // let custom accessors shipped with the plugin win
+                    visitAnnotation("Lkotlin/internal/LowPriorityInOverloadResolution;", true).visitEnd()
                     ALOAD(0)
                     CHECKCAST(GradleTypeName.extensionAware)
                     INVOKEINTERFACE(
@@ -739,6 +741,7 @@ fun fragmentsForExtension(accessor: Accessor.ForExtension): Fragments {
             },
             metadata = {
                 kmPackage.functions += newFunctionOf(
+                    flags = publicFunctionWithAnnotationsFlags,
                     receiverType = receiverType,
                     returnType = KotlinType.unit,
                     name = propertyName,
