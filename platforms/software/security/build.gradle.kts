@@ -24,7 +24,7 @@ dependencies {
     implementation(libs.bouncycastleProvider)
     implementation(libs.guava)
     implementation(libs.inject)
-    implementation(libs.jsr305)
+    api(libs.jsr305)
 
     testImplementation(testFixtures(project(":core")))
 
