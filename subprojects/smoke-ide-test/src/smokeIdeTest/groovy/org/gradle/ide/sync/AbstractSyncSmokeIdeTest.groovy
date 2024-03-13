@@ -36,8 +36,6 @@ import org.gradle.profiler.studio.AndroidStudioSyncAction
 import org.gradle.profiler.studio.invoker.StudioBuildInvocationResult
 import org.gradle.profiler.studio.invoker.StudioGradleScenarioDefinition
 import org.gradle.profiler.studio.invoker.StudioGradleScenarioInvoker
-import org.gradle.test.precondition.Requires
-import org.gradle.test.preconditions.IntegTestPreconditions
 
 import java.nio.file.Path
 import java.util.function.Consumer
@@ -47,7 +45,6 @@ import java.util.function.Consumer
  *
  * Provisioned IDEs are cached in the {@link AbstractSyncSmokeIdeTest#ideHome} directory.
  */
-@Requires(IntegTestPreconditions.Java17HomeAvailable)
 abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
 
     private static final String INTELLIJ_COMMUNITY_TYPE = "IC"
