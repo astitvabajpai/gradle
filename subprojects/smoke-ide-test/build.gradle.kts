@@ -89,7 +89,7 @@ class SmokeIdeTestSystemProperties(
 dependencies {
     smokeIdeTestImplementation(libs.gradleProfiler) {
         version {
-            strictly("0.21.17-alpha-5")
+            strictly("0.21.17-alpha-6")
             because("IDE provisioning requires special version of profiler compiled with Java 17")
         }
 

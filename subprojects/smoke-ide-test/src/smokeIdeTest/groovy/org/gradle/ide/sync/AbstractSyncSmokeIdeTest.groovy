@@ -42,12 +42,12 @@ import org.gradle.test.preconditions.IntegTestPreconditions
 import java.nio.file.Path
 import java.util.function.Consumer
 
-@Requires(IntegTestPreconditions.Java17HomeAvailable)
 /**
  * Tests that runs a project import to IDE, with an optional provisioning of the desired IDE.
  *
  * Provisioned IDEs are cached in the {@link AbstractSyncSmokeIdeTest#ideHome} directory.
  */
+@Requires(IntegTestPreconditions.Java17HomeAvailable)
 abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
 
     private static final String INTELLIJ_COMMUNITY_TYPE = "IC"
