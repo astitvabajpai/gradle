@@ -191,20 +191,7 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
                         syncResult = studioBuildInvocationResult
                     }
                 })
-        }
-        catch (NullPointerException e) {
-            /*
-            Initial (a very first for a project, essentially a warmup one) sync in a headless mode
-            behaves differently to common scenarios.
-
-            Sync itself is finishing successfully, but an infrastructure inside the gradle-profiler doesn't
-            able to get an event of it.
-
-            Currently AbstractSyncSmokeIdeTest relies on a side-effect of sync - creation of a CC report.
-            So it's safe for testing purposes to catch gradle-profiler infrastructure exceptions here.
-            */
-        }
-        catch (IOException | InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             printIdeLog(ideSandbox)
             throw UncheckedException.throwAsUncheckedException(e)
         } finally {
