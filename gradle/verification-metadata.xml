@@ -383,6 +383,11 @@
             <sha256 value="dbe764371f40869cf199e02d538b305656f49fb930afe072a1c929b881a035cf" origin="Verified" reason="Artifact is not signed"/>
          </artifact>
       </component>
+      <component group="android-studio" name="android-studio" version="2023.3.1.13">
+         <artifact name="android-studio-2023.3.1.13.mac_arm.zip">
+            <sha256 value="9fbe5413b966865f4b31fe0b533d9e081e426f47b7f7b49dd575693acd2d5424" origin="Verified" reason="Artifact is not signed"/>
+         </artifact>
+      </component>
       <component group="antlr" name="antlr" version="2.7.7">
          <artifact name="antlr-2.7.7.jar">
             <sha256 value="88fbda4b912596b9f56e8e12e580cc954bacfb51776ecfddd3e18fc1cf56dc4c" origin="Verified" reason="Artifact is not signed"/>

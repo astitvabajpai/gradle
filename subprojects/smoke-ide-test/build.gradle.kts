@@ -1,9 +1,11 @@
 import gradlebuild.basics.gradleProperty
 import gradlebuild.integrationtests.tasks.SmokeIdeTest
 import gradlebuild.integrationtests.addDependenciesAndConfigurations
+import gradlebuild.integrationtests.ide.AndroidStudioProvisioningExtension
 
 plugins {
     id("gradlebuild.internal.java")
+    id("gradlebuild.android-studio-provisioning")
 }
 
 description = "Tests are checking Gradle behavior during IDE synchronization process"
@@ -44,10 +46,15 @@ plugins.withType<IdeaPlugin> {
     }
 }
 
+androidStudioProvisioning {
+    androidStudioVersion = "2023.3.1.13"
+}
+
 tasks.register<SmokeIdeTest>("smokeIdeTest") {
     group = "Verification"
     maxParallelForks = 1
     systemProperties["org.gradle.integtest.executer"] = "forking"
+
     testClassesDirs = smokeIdeTestSourceSet.output.classesDirs
     classpath = smokeIdeTestSourceSet.runtimeClasspath
     javaLauncher = javaToolchains.launcherFor {
@@ -59,6 +66,10 @@ tasks.register<SmokeIdeTest>("smokeIdeTest") {
             gradleProperty("studioHome")
         )
     )
+
+    val jvmArgumentProvider = project.extensions.getByType<AndroidStudioProvisioningExtension>()
+        .androidStudioSystemProperties(project, emptyList())
+    jvmArgumentProviders.add(jvmArgumentProvider)
 }
 
 tasks.withType<GroovyCompile>().configureEach {
@@ -85,7 +96,6 @@ class SmokeIdeTestSystemProperties(
     }.toMutableList()
 }
 
-
 dependencies {
     smokeIdeTestImplementation(libs.gradleProfiler) {
         version {
@@ -93,7 +103,7 @@ dependencies {
             because("IDE provisioning requires special version of profiler compiled with Java 17")
         }
 
-        // This dep is conflicting with the version from `:distributions-full` project.
+//      This dep is conflicting with the version from `:distributions-full` project.
         exclude("io.grpc")
     }
     smokeIdeTestDistributionRuntimeOnly(project(":distributions-full")) {

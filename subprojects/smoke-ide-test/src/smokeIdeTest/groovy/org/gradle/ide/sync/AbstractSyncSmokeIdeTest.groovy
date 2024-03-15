@@ -17,7 +17,9 @@
 package org.gradle.ide.sync
 
 
-import org.gradle.integtests.fixtures.AbstractIntegrationSpec
+import org.gradle.integtests.fixtures.executer.GradleDistribution
+import org.gradle.integtests.fixtures.executer.IntegrationTestBuildContext
+import org.gradle.integtests.fixtures.executer.UnderDevelopmentGradleDistribution
 import org.gradle.internal.UncheckedException
 import org.gradle.internal.jvm.Jvm
 import org.gradle.profiler.BuildAction
@@ -36,6 +38,13 @@ import org.gradle.profiler.studio.AndroidStudioSyncAction
 import org.gradle.profiler.studio.invoker.StudioBuildInvocationResult
 import org.gradle.profiler.studio.invoker.StudioGradleScenarioDefinition
 import org.gradle.profiler.studio.invoker.StudioGradleScenarioInvoker
+import org.gradle.profiler.studio.tools.StudioFinder
+import org.gradle.test.fixtures.file.CleanupTestDirectory
+import org.gradle.test.fixtures.file.TestFile
+import org.gradle.test.fixtures.file.TestNameTestDirectoryProvider
+import org.junit.Rule
+import spock.lang.Specification
+import spock.lang.Timeout
 
 import java.nio.file.Path
 import java.util.function.Consumer
@@ -43,41 +52,46 @@ import java.util.function.Consumer
 /**
  * Tests that runs a project import to IDE, with an optional provisioning of the desired IDE.
  *
- * Provisioned IDEs are cached in the {@link AbstractSyncSmokeIdeTest#ideHome} directory.
+ * Provisioned IDEs are cached in the {@link AbstractSyncSmokeIdeTest#getIdeHome} directory.
  */
-abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
+@CleanupTestDirectory
+@Timeout(600)
+abstract class AbstractSyncSmokeIdeTest extends Specification {
 
     private static final String INTELLIJ_COMMUNITY_TYPE = "IC"
 
     private static final String ANDROID_STUDIO_TYPE = "AI"
 
-    private final Path ideHome = buildContext.gradleUserHomeDir.file("ide").toPath()
-
-    private final File ideSandbox = file("ide-sandbox")
-
-    private final File profilerOutput = file("profiler-output")
-
     protected StudioBuildInvocationResult syncResult
 
-    /**
-     * Downloads, if it absent in {@link #ideHome} dir, Android Studio with a passed version
-     * and runs a project import to it.
-     *
-     * Requires ANDROID_HOME env. variable set with Android SDK (normally on MacOS it's installed in "$HOME/Library/Android/sdk").
-     *
-     * Local Android Studio installation can be passed via `studioHome` system property and it takes precedence over
-     * a version passed as a parameter.
-     */
-    protected void androidStudioSync(String version) {
+    @Rule
+    public final TestNameTestDirectoryProvider temporaryFolder = new TestNameTestDirectoryProvider(getClass())
+
+    private final GradleDistribution distribution = new UnderDevelopmentGradleDistribution(getBuildContext())
+
+    private IntegrationTestBuildContext getBuildContext() {
+        return IntegrationTestBuildContext.INSTANCE
+    }
+
+/**
+ * Downloads, if it absent in {@link #getIdeHome} dir, Android Studio with a passed version
+ * and runs a project import to it.
+ *
+ * Requires ANDROID_HOME env. variable set with Android SDK (normally on MacOS it's installed in "$HOME/Library/Android/sdk").
+ *
+ * Local Android Studio installation can be passed via `studioHome` system property and it takes precedence over
+ * a version passed as a parameter.
+ */
+    protected void androidStudioSync() {
         assert System.getenv("ANDROID_HOME") != null
         String androidHomePath = System.getenv("ANDROID_HOME")
 
         def invocationSettings =
-            syncInvocationSettingsBuilder(getIdeInstallDirFromSystemProperty("studioHome")).build()
+            syncInvocationSettingsBuilder(StudioFinder.findStudioHome()).build()
 
         sync(
             ANDROID_STUDIO_TYPE,
-            version,
+            null,
             null,
             ideHome,
             "Android Studio sync",
@@ -87,7 +101,7 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
     }
 
     /**
-     * Downloads, if it absent in {@link #ideHome} dir, Intellij IDEA with a passed version and a build type,
+     * Downloads, if it absent in {@link #getIdeHome} dir, Intellij IDEA with a passed version and a build type,
      * and runs a project import to it.
      *
      * Available build types are: release, eap, rc.
@@ -110,9 +124,32 @@ abstract class AbstractSyncSmokeIdeTest extends AbstractIntegrationSpec {
         )
     }
 
+    protected TestFile file(Object... path) {
+        if (path.length == 1 && path[0] instanceof TestFile) {
+            return path[0] as TestFile
+        }
+        testDirectory.file(path)
+    }
+
+    protected TestFile getTestDirectory() {
+        temporaryFolder.testDirectory
+    }
+
     private File getIdeInstallDirFromSystemProperty(String propertyName) {
         def dir = System.getProperty(propertyName)
         return dir != null ? new File(dir) : null
+    }
+
+    private Path getIdeHome() {
+        buildContext.gradleUserHomeDir.file("ide").toPath()
+    }
+
+    private File getIdeSandbox() {
+        file("ide-sandbox")
+    }
+
+    private File getProfilerOutput() {
+        file("profiler-output")
     }
 
     private InvocationSettings.InvocationSettingsBuilder syncInvocationSettingsBuilder(File ideInstallDir) {
