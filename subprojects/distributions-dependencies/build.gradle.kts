@@ -65,9 +65,9 @@ dependencies {
         api(libs.bsh)                   { version { strictly("2.0b6") }}
         api(libs.capsule)               { version { strictly("0.6.3") }}
         api(libs.commonsCodec)          { version { strictly("1.15") } }
-        api(libs.commonsCompress)       { version { strictly("1.25.0") } }
+        api(libs.commonsCompress)       { version { strictly("1.26.1") } }
         api(libs.commonsHttpclient)     { version { strictly("4.5.14") } }
-        api(libs.commonsIo)             { version { strictly("2.11.0") }}
+        api(libs.commonsIo)             { version { strictly("2.15.1") }}
         api(libs.commonsLang)           { version { strictly("2.6") }}
         api(libs.commonsLang3)          { version { strictly("3.12.0") }}
         api(libs.commonsMath)           { version { strictly("3.6.1") }}
